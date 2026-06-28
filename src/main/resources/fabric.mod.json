@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "skyblockflips",
+  "version": "${version}",
+  "name": "Skyblock Flips",
+  "description": "A mod that sends chat messages to the Skyblock flips HTTP server",
+  "authors": [
+    "Kargone"
+  ],
+  "contact": {
+    "homepage": "https://github.com/kargone/Skyblock-Flips-Client-Side",
+    "sources": "https://github.com/kargone/Skyblock-Flips-Client-Side"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.github.kargone.skyblockflips2.ExampleMod"
+    ]
+  },
+  "mixins": [
+    "skyblockflips.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
