@@ -1,7 +1,5 @@
 package com.github.kargone.skyblockflips2;
 
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -18,7 +16,8 @@ public class HttpClientExample {
         String result = "";
         HttpPost post = new HttpPost(url);
 
-        // send a JSON data
+        // Set content type to JSON so the server knows how to parse it
+        post.setHeader("Content-Type", "application/json");
         post.setEntity(new StringEntity(postMessage));
         System.out.println(post);
 
