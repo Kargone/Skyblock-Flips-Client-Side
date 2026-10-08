@@ -1,15 +1,17 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.github.kargone.skyblockflips2.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "package": "com.github.kargone.skyblockflips.mixin",
+  "compatibilityLevel": "JAVA_25",
   "mixins": [
-  ],
-  "client": [
-    "MixinTitleScreen",
-    "MixinChatListener"
+    "ChatListenerMixin",
+    "ScreenMixin",
+    "ContainerScreenMixin",
+    "SignEditScreenMixin",
+    "MinecraftMixin",
+    "TitleScreenMixin"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

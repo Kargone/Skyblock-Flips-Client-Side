@@ -1,5 +1,5 @@
 plugins {
-    id("fabric-loom") version "1.8-SNAPSHOT"
+    id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
     id("maven-publish")
 }
 
@@ -14,9 +14,8 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
+    implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_api_version")}")
 
     implementation("org.apache.httpcomponents:httpclient:4.5.10")
     include("org.apache.httpcomponents:httpclient:4.5.10")
@@ -31,35 +30,19 @@ tasks.processResources {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
     withSourcesJar()
 }
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    options.release.set(21)
+    options.release.set(25)
 }
 
 tasks.jar {
-    archiveClassifier.set("") 
+    archiveClassifier.set("")
     from("LICENSE") {
         rename { "${it}_${project.property("archives_base_name")}" }
-    }
-}
-
-// DISABLE REMAPPING - This keeps the Mojang names in the jar
-tasks.remapJar {
-    enabled = false
-}
-
-// Ensure the un-remapped jar is what gets built
-tasks.build {
-    dependsOn(tasks.jar)
-    doLast {
-        copy {
-            from("build/devlibs/Skyblock-Flips-Client-Side-1.2.jar")
-            into("build/libs")
-        }
     }
 }

@@ -8,14 +8,14 @@
     "Kargone"
   ],
   "contact": {
-    "homepage": "https://github.com/kargone/Skyblock-Flips-Client-Side",
-    "sources": "https://github.com/kargone/Skyblock-Flips-Client-Side"
+    "homepage": "https://github.com/Kargone/Skyblock-Flips-Client-Side",
+    "sources": "https://github.com/Kargone/Skyblock-Flips-Client-Side"
   },
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.github.kargone.skyblockflips2.ExampleMod"
+      "com.github.kargone.skyblockflips.SkyblockFlipsClient"
     ]
   },
   "mixins": [
@@ -23,8 +23,8 @@
   ],
   "depends": {
     "fabricloader": ">=0.16.5",
-    "minecraft": "26.1.2",
-    "java": ">=21",
-    "fabric-api": "*"
+    "minecraft": ">=26.1.2 <26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.155.2"
   }
 }
