@@ -1,0 +1,86 @@
+Aatrox has only three perks: half-price slayer quests, 25% more Slayer XP, and Pathfinder, which makes rare drops 20% more common.
+minecraft
+
+Pathfinder matters most. It pushes up supply of rare slayer drops directly.
+Cheaper quests lead to more slayer runs, so common drops like Revenant Flesh, Tarantula Silk, and Wolf Teeth flood the market.
+Slayer XP has little direct effect on prices.
+
+Cole
+
+Mining Fiesta is the big one. It gives +25% Mining Fortune and lets mining drop Refined Minerals and Glossy Gemstones. Fiesta Flasks and Packrat Shards can also be bought from Brynmor while it’s active. This floods gemstones and Jasper.
+minecraft
+Prospection ignore this one
+Molten Forge ignore this one
+Mining XP Buff has little effect on prices.
+
+Diana
+
+Mythological Ritual drives this whole market. Diana sells the Griffin Pet, which is what lets players find Mythological Creatures and their drops. Without this perk, Chimera, Daedalus Sticks, and Griffin Feathers can’t be farmed, so this is the one to watch.
+minecraft
+Pet XP Buff and Sharing is Caring ignore this one
+Huntress’ Intuition has little effect on prices.
+
+Diaz
+
+Shopping Spree raises daily NPC buy limits by 10x, and this also applies to trades. This is where your Ice idea fits: anything capped by NPC limits gets cheaper to source.
+minecraft
+Volume Trading ignore this one
+Stock Exchange brings in the Stonks Auction for Stock of Stonks, which can be traded at the Trade Center.
+Long Term Investment doesn’t move prices directly, but it makes the next election easier to predict.
+
+Finnegan (corrections here)
+Pelt-pocalypse isn’t on his perk list anymore, so Trapper items probably shouldn’t be on your Finnegan list. His current perks are:
+
+GOATed: Jacob’s Contest brackets include up to 10% more players. This means more medals, which lowers medal-based prices. Probably won't affect bazaar.
+Blooming Business: visitors come more often, give out Fine Flour, and higher-rarity visitors give 10% more Copper. Fine Flour and Copper-shop items get more supply.
+minecraft
+Grand Feast: the Harvest Feast lasts all year and the Grand Bakery opens for Kernel purchases.
+minecraft
+Pest Eradicator: pests spawn 20% more often and Phillip’s fortune bonus lasts 60 minutes, so pest drops flood.
+minecraft
+
+Foxy
+
+Extra Event: adds one extra Spooky Festival, Mining Fiesta, or Fishing Festival. Winter isn’t one of the options, so gifts only rise through Sweet Benevolence.
+minecraft
+Sweet Benevolence: +30% Candy, Gifts, and Chocolate from duplicate Rabbits during their events. This is what floods Purple Candy.
+minecraft
+A Time for Giving and Chivalrous Carnival add Party Chests and Party Gifts and a year-long Carnival in the Hub, which brings in extra supply of event items.
+minecraft
+
+Marina
+
+Fishing Festival runs a shark event on the first 3 days of each month. This floods shark teeth. (very important)
+minecraft
+Luck of the Sea 2.0 and Double Trouble give +15 doesn't affect much
+minecraft
+Fishing XP Buff has little effect on prices.
+
+Paul
+
+Marauder makes dungeon reward chests 20% cheaper, so more chests get opened and more Recombs, Fuming Potato Books, and Necron’s Handles reach the market. This is the biggest one.
+minecraft
+EZPZ adds 10 bonus score. Higher score means better chest odds, which adds to that same supply.
+minecraft
+Benediction (blessings 25% stronger) has little effect on prices.
+minecraft
+
+Derpy
+
+TURBO MINIONS doubles minion output. This floods minion outputs like Quartz and tends to increase demand for Hyper Catalysts and other speed boosts.
+minecraft
+QUAD TAXES quadruples taxes, which cuts flip margins and slows trading.
+minecraft
+MOAR SKILLZ gives +50% skill XP, which raises demand for skill-grinding items.
+minecraft
+DOUBLE MOBS HP doesn't do much
+
+Jerry
+
+Perkpocalypse turns on another mayor’s full perk set every 6 real hours. This creates short price swings, not long trends. Diaz is never included in the rotation.
+minecraft
+minecraft
+Statspocalypse and Jerrypocalypse give +10% combat and misc stats and reveal hidden Jerries from logging, farming, mining, and killing mobs.
+minecraft
+
+Ministers work differently than I said last time. One random perk from each regular candidate is preset as their Minister perk, so check which perk the runner-up would bring. A Paul Minister with Marauder affects dungeon loot far more than one with Benediction.

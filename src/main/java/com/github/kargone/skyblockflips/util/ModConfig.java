@@ -19,7 +19,7 @@ import java.nio.file.Path;
  */
 public final class ModConfig {
 
-    public static final String DEFAULT_SERVER_URL = "http://localhost:8000";
+    public static final String DEFAULT_SERVER_URL = "http://192.168.0.15:8000";
 
     private static final String CONFIG_NAME = "skyblockflips.json";
     private static final String SERVER_URL_KEY = "serverUrl";

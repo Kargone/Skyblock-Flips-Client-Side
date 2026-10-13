@@ -5,7 +5,7 @@
 - [x] **Server Communication**: Test the `/batch` endpoint on the local HTTP server to ensure it handles the new JSON array format.
 - [x] **Configurable server address**: `serverUrl` in `config/skyblockflips.json` (`util/ModConfig`), so the
       server can run on another computer on the network.
-- [ ] **Test a full forge cycle in game**: start, finish, claim, then sell one. Check the dashboard's Forge
+- [x] **Test a full forge cycle in game**: start, finish, claim, then sell one. Check the dashboard's Forge
       tab and the forge panel both show it, and that the sale lands in forge profit.
 
 ## Features
@@ -20,8 +20,8 @@
     - [x] Trend hint (falling / bottom / rising / flat) from half-hourly price history.
     - [x] Spooky Festival countdown with Ectoplasm's price.
     - [x] Derpy's QUAD TAXES sets the tax multiplier automatically.
-    - [ ] Check the ▼ ▲ ● – symbols render in game; swap for plain characters if they show as boxes.
-    - [ ] The window can get taller than the screen at small GUI scales; collapse notes or cap each section.
+    - [x] Check the ▼ ▲ ● – symbols render in game; swap for plain characters if they show as boxes.
+    - [x] The window can get taller than the screen at small GUI scales; collapse notes or cap each section.
 - [x] **Auction Helper**:
     - [x] Compare BIN prices with Bazaar prices for potential "Craft Flips".
         - `overlay/CraftProductsOverlay` draws the dashboard's Auction Products table in game, ranked by margin.
@@ -35,6 +35,7 @@
     - [x] Lowest BIN offered on the Create BIN Auction price sign.
     - [ ] Option to cost a sub-item at whichever is cheaper, crafting it or buying it. Today a material
           with a recipe is always costed by its recipe. Has to change in `script.js` too.
+    - [ ] Make sure the mod recongizes that you have partial mats and deducts that from needed mats.
 - [x] **Forge Tracker**:
     - [x] Track time remaining for Forge processes (the forge menu is read and sent to the server).
     - [x] Show running forges, time left and projected profit in the forge panel and the Bazaar window.
@@ -54,6 +55,7 @@
 - [ ] **Auto-Sell Calculator**: Calculate if it's better to sell to NPC or Bazaar based on current prices.
 - [x] **Recipe Integration**: Pull recipe data to calculate crafting costs on the fly.
 - [ ] have the mod go read when you aren't selling the max of a material in inv
+- [ ] Minister inclusion
 
 ## Final things
 - [x] Update the readme

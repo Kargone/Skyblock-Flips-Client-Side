@@ -20,10 +20,12 @@ import java.util.function.Supplier;
  * The dashboard's "Auction Products" and "Forge Products" tables, in game: one
  * class, built once for each by {@link #auction()} and {@link #forge()}.
  *
- * Each entry is one craftable product - what its materials cost with buy
- * orders, what the crafted item sells for, and the margin - ranked so the best
- * flip is first, laid out down the left column then down the right. The forge
- * table also shows each product's forge time and whether it sells on the Bazaar
+ * Each entry is one craftable product - what its materials cost, what the
+ * crafted item sells for, and the margin - ranked so the best flip is first,
+ * laid out down the left column then down the right. The auction table costs a
+ * craft at the have-mats price when held materials cover it and at the insta buy
+ * price otherwise; the forge table uses buy order prices like the dashboard.
+ * The forge table also shows each product's forge time and whether it sells on the Bazaar
  * or the Auction House, and a button beside the title switches it between the
  * top recipes that sell on the Auction House and those that sell on the Bazaar.
  * Above the recipes, the forge panel lists what is forging right now, from the
@@ -162,10 +164,15 @@ public class CraftProductsOverlay {
             graphics.text(font, emptyLine(), textX, rowsTop, 0xFFFFFFFF, true);
         }
 
-        String legend = columnWidth >= INSTA_MARGIN_WIDTH
-                ? "§8cost > value  buy order/insta §7- click a name for its materials"
-                : "§8cost > value  buy order";
-        if (forgeColumns) {
+        String legend;
+        if (!forgeColumns) {
+            legend = columnWidth >= INSTA_MARGIN_WIDTH
+                    ? "§8cost > value  §bhave mats§8/§7insta buy §7- click a name for its materials"
+                    : "§8cost > value  §bhave mats§8/§7insta";
+        } else {
+            legend = columnWidth >= INSTA_MARGIN_WIDTH
+                    ? "§8cost > value  buy order/insta §7- click a name for its materials"
+                    : "§8cost > value  buy order";
             legend = "§6BZ§8/§dAH §8button switches market  " + legend;
         }
         graphics.text(font, SkyblockText.fit(legend, panelWidth - PADDING * 2),
@@ -187,7 +194,9 @@ public class CraftProductsOverlay {
                              int mouseX, int mouseY, List<AuctionPanelInput.ClickTarget> targets) {
         CostBreakdown breakdown = product.breakdown();
 
-        String haveMats = breakdown.owned() != 0 ? "§8have §b" + SkyblockText.coins(breakdown.owned()) : "";
+        // Auction rows already show the have-mats price as their cost, so only
+        // the forge table needs the separate note.
+        String haveMats = forgeColumns && breakdown.coveredByOwned() ? "§8have §b" + SkyblockText.coins(breakdown.owned()) : "";
         if (forgeColumns) {
             // Forge time and where it sells sit after the name, ahead of any "have".
             String forgeNote = "§7" + duration(product.entry().secondsToCraft())
@@ -214,6 +223,17 @@ public class CraftProductsOverlay {
         }
         targets.add(new AuctionPanelInput.ClickTarget(cellX, cellY, titleWidth, lineHeight,
                 AuctionPanelInput.Action.OPEN_BREAKDOWN, product.name(), 0));
+
+        if (!forgeColumns) {
+            // Auction rows cost the craft at the have-mats price when held
+            // materials cover it (shown in aqua), else at the insta buy price.
+            double craftMargin = breakdown.craftMargin();
+            graphics.text(font, (breakdown.coveredByOwned() ? "§b" : "§7") + SkyblockText.coins(breakdown.craftCost())
+                            + " §8> §f" + SkyblockText.coins(breakdown.marketValue())
+                            + " " + (craftMargin >= 0 ? "§a" : "§c") + SkyblockText.signedCoins(craftMargin),
+                    cellX, cellY + lineHeight, 0xFFFFFFFF, true);
+            return;
+        }
 
         String marginColor = breakdown.margin() >= 0 ? "§a" : "§c";
         String instaColor = breakdown.instaBuyMargin() >= 0 ? "§a" : "§c";

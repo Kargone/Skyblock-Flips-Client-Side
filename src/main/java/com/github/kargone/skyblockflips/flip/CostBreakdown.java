@@ -22,6 +22,24 @@ public record CostBreakdown(
         return instaBuy - buyOrder;
     }
 
+    /** Whether the materials already held cover the whole recipe. */
+    public boolean coveredByOwned() {
+        return owned != 0;
+    }
+
+    /**
+     * What the craft actually costs you: the have-mats price when held materials
+     * cover the recipe, otherwise the insta buy price.
+     */
+    public double craftCost() {
+        return coveredByOwned() ? owned : instaBuy;
+    }
+
+    /** Market value less the sale fee, minus {@link #craftCost()}. */
+    public double craftMargin() {
+        return margin + buyOrder - craftCost();
+    }
+
     /** Margin when the materials are bought instantly, shown as the "(x)" on the margin column. */
     public double instaBuyMargin() {
         return margin - instaBuyPremium();

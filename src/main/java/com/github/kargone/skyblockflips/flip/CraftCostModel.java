@@ -16,6 +16,11 @@ import java.util.Set;
  * The point of this class is that the mod and the dashboard agree to the coin.
  * Where the JavaScript does something surprising, this follows it anyway and
  * says so in a comment rather than quietly improving on it.
+ *
+ * The one deliberate exception is the owned ("have mats") cost, which the
+ * dashboard gets wrong: it ignores quantities when an ingredient is crafted
+ * from stock, spends stock while merely checking coverage, and prices
+ * unrecorded holdings as free. {@link #ownedCost} is written from scratch.
  */
 public final class CraftCostModel {
 
@@ -23,14 +28,12 @@ public final class CraftCostModel {
         /** Materials bought off the top of the Bazaar's book. */
         INSTA_BUY,
         /** Materials bought with buy orders. */
-        BUY_ORDER,
-        /** Materials taken from what is already held. */
-        OWNED
+        BUY_ORDER
     }
 
     /**
      * Recipes are expected to be shallow. A cyclic one would recurse forever
-     * because owned-cost lookups deliberately start a fresh visited set, exactly
+     * because uncraftable lookups deliberately start a fresh visited set, exactly
      * as the dashboard does, so depth is capped instead.
      */
     private static final int MAX_DEPTH = 32;
@@ -48,9 +51,9 @@ public final class CraftCostModel {
 
     /** Port of the dashboard's {@code getCraftingCostBreakdown}. */
     public CostBreakdown breakdownOf(String name, InventorySnapshot investments) {
-        double instaBuy = recipeCost(name, Mode.INSTA_BUY, null, new HashSet<>(), 0);
-        double buyOrder = recipeCost(name, Mode.BUY_ORDER, null, new HashSet<>(), 0);
-        double owned = recipeCost(name, Mode.OWNED, investments.copy(), new HashSet<>(), 0);
+        double instaBuy = recipeCost(name, Mode.INSTA_BUY, new HashSet<>(), 0);
+        double buyOrder = recipeCost(name, Mode.BUY_ORDER, new HashSet<>(), 0);
+        double owned = ownedRecipeCost(name, investments.copy());
         double marketValue = marketValueOf(name);
 
         ProductEntry entry = products.get(name);
@@ -104,9 +107,10 @@ public final class CraftCostModel {
             String materialName = raw.getKey();
             int quantity = clampToInt(raw.getValue());
 
-            double instaBuy = unitCostOf(materialName, Mode.INSTA_BUY, null, 0D);
-            double buyOrder = unitCostOf(materialName, Mode.BUY_ORDER, null, 0D);
-            double owned = unitCostOf(materialName, Mode.OWNED, investments.copy(), quantity);
+            double instaBuy = unitCostOf(materialName, Mode.INSTA_BUY);
+            double buyOrder = unitCostOf(materialName, Mode.BUY_ORDER);
+            Double ownedTotal = ownedCost(materialName, quantity, investments.copy(), new HashSet<>(), 0);
+            double owned = ownedTotal == null ? 0D : ownedTotal / quantity;
 
             ProductEntry materialEntry = products.get(materialName);
             String apiName = materialEntry == null || !materialEntry.hasApiName() ? "" : materialEntry.apiName();
@@ -157,8 +161,8 @@ public final class CraftCostModel {
     }
 
     /** Port of the dashboard's {@code getProductUnitCost}, for callers outside the recursion. */
-    public double unitCostOf(String name, Mode mode, InventorySnapshot snapshot, double amountNeeded) {
-        return unitCost(name, mode, snapshot, amountNeeded, new HashSet<>(), 0);
+    public double unitCostOf(String name, Mode mode) {
+        return unitCost(name, mode, new HashSet<>(), 0);
     }
 
     /** Port of the dashboard's {@code getCraftingMarketValue}. */
@@ -192,15 +196,15 @@ public final class CraftCostModel {
         return lowestBin == null ? 0D : lowestBin;
     }
 
-    /** Port of the dashboard's {@code getRecipeCost}. */
-    private double recipeCost(String name, Mode mode, InventorySnapshot snapshot, Set<String> path, int depth) {
+    /** Port of the dashboard's {@code getRecipeCost}, for the market price modes. */
+    private double recipeCost(String name, Mode mode, Set<String> path, int depth) {
         if (depth > MAX_DEPTH) return 0D;
 
         ProductEntry entry = products.get(name);
         if (entry == null || !entry.isCraftable()) {
             // The dashboard passes its visited set into the amount-needed slot here,
-            // which lands as a fresh visited set and an amount of zero. Same effect.
-            return unitCost(name, mode, snapshot, 0D, new HashSet<>(), depth + 1);
+            // which lands as a fresh visited set. Same effect.
+            return unitCost(name, mode, new HashSet<>(), depth + 1);
         }
 
         String normalized = normalizeName(name, entry.tier());
@@ -209,50 +213,23 @@ public final class CraftCostModel {
 
         double totalCost = 0D;
         for (Map.Entry<String, Integer> material : entry.craftingMaterials().entrySet()) {
-            String materialName = material.getKey();
-            double remaining = material.getValue();
-
-            Double ownedUnitCost = snapshot == null
-                    ? null
-                    : ownedUnitCost(materialName, snapshot, remaining, depth + 1);
-
-            // A material that cannot be covered collapses the whole owned cost to
-            // zero. The visited set is deliberately left dirty on this path, as in
-            // the dashboard, so the caller sees the same state it would there.
-            if (ownedUnitCost == null && mode == Mode.OWNED) return 0D;
-
-            InventorySnapshot.Holding holding = snapshot == null ? null : snapshot.holdingOf(materialName);
-            if (holding != null && holding.amount() > 0 && ownedUnitCost != null) {
-                double used = Math.min(remaining, holding.amount());
-                totalCost += used * ownedUnitCost;
-                holding.consume(used, ownedUnitCost);
-                remaining -= used;
-            }
-
-            if (remaining > 0) {
-                totalCost += unitCost(materialName, mode, snapshot, 0D, path, depth + 1) * remaining;
-            }
+            totalCost += unitCost(material.getKey(), mode, path, depth + 1) * material.getValue();
         }
 
         path.remove(normalized);
         return totalCost;
     }
 
-    /** Port of the dashboard's {@code getProductUnitCost}. */
-    private double unitCost(String name, Mode mode, InventorySnapshot snapshot, double amountNeeded, Set<String> path, int depth) {
+    /** Port of the dashboard's {@code getProductUnitCost}, for the market price modes. */
+    private double unitCost(String name, Mode mode, Set<String> path, int depth) {
         if (depth > MAX_DEPTH) return 0D;
 
         String normalized = normalizeName(name, null);
         if (path.contains(normalized)) return 0D;
 
         ProductEntry entry = products.get(name);
-
-        Double ownedUnitCost = snapshot == null ? null : ownedUnitCost(name, snapshot, amountNeeded, depth + 1);
-        if (ownedUnitCost != null) return ownedUnitCost;
-        if (mode == Mode.OWNED) return 0D;
-
         if (entry != null && entry.isCraftable()) {
-            return recipeCost(name, mode, snapshot, path, depth + 1);
+            return recipeCost(name, mode, path, depth + 1);
         }
 
         MarketData.BazaarQuote quote = bazaarQuoteOf(entry);
@@ -265,26 +242,69 @@ public final class CraftCostModel {
     }
 
     /**
-     * Port of the dashboard's {@code getOwnedUnitCost}.
-     *
-     * @return the unit cost of covering this material from stock, or {@code null}
-     *         when it cannot be covered and has to be bought.
+     * What one craft of a product costs when every material comes out of held
+     * stock, or 0 when stock cannot cover the whole recipe. Copies of the product
+     * itself already held are not counted - the point is to make a new one.
      */
-    private Double ownedUnitCost(String name, InventorySnapshot snapshot, double amountNeeded, int depth) {
+    private double ownedRecipeCost(String name, InventorySnapshot snapshot) {
+        ProductEntry entry = products.get(name);
+        if (entry == null || !entry.isCraftable()) return 0D;
+
+        Set<String> path = new HashSet<>();
+        path.add(normalizeName(name, entry.tier()));
+        Double cost = ownedMaterialsCost(entry, 1D, snapshot, path, 0);
+        return cost == null ? 0D : cost;
+    }
+
+    /**
+     * Total cost of {@code amount} of an item taken from stock: held units first,
+     * at what was paid for them, then any shortfall crafted from stock for exactly
+     * the units still missing. Held units with no recorded price are left alone,
+     * since counting them would make the craft look free.
+     *
+     * @return the total cost, or {@code null} when stock cannot cover all of it.
+     *         The snapshot is consumed as costs are counted, so a caller that gets
+     *         null must throw its copy away.
+     */
+    private Double ownedCost(String name, double amount, InventorySnapshot snapshot, Set<String> path, int depth) {
+        if (amount <= 0) return 0D;
         if (depth > MAX_DEPTH) return null;
 
-        ProductEntry entry = products.get(name);
-        if (entry != null && entry.isCraftable()) {
-            // Something not in stock may still be craftable out of what is in stock.
-            double craftCost = recipeCost(name, Mode.OWNED, snapshot, new HashSet<>(), depth + 1);
-            if (craftCost > 0) return craftCost;
-        }
+        double totalCost = 0D;
+        double remaining = amount;
 
         InventorySnapshot.Holding holding = snapshot.holdingOf(name);
-        if (holding == null || holding.amount() == 0) return null;
-        if (amountNeeded > 0 && holding.amount() < amountNeeded) return null;
+        if (holding != null && holding.amount() > 0 && holding.unitCost() > 0) {
+            double unitCost = holding.unitCost();
+            double used = Math.min(remaining, holding.amount());
+            holding.consume(used, unitCost);
+            totalCost += used * unitCost;
+            remaining -= used;
+        }
+        if (remaining <= 0) return totalCost;
 
-        return holding.unitCost();
+        ProductEntry entry = products.get(name);
+        if (entry == null || !entry.isCraftable()) return null;
+
+        String normalized = normalizeName(name, entry.tier());
+        if (path.contains(normalized)) return null;
+        path.add(normalized);
+        Double craftCost = ownedMaterialsCost(entry, remaining, snapshot, path, depth + 1);
+        path.remove(normalized);
+
+        return craftCost == null ? null : totalCost + craftCost;
+    }
+
+    /** Every material for {@code crafts} crafts of a recipe from stock, or null if any falls short. */
+    private Double ownedMaterialsCost(ProductEntry entry, double crafts, InventorySnapshot snapshot,
+                                      Set<String> path, int depth) {
+        double totalCost = 0D;
+        for (Map.Entry<String, Integer> material : entry.craftingMaterials().entrySet()) {
+            Double cost = ownedCost(material.getKey(), crafts * material.getValue(), snapshot, path, depth);
+            if (cost == null) return null;
+            totalCost += cost;
+        }
+        return totalCost;
     }
 
     /**

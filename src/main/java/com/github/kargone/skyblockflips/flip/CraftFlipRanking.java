@@ -53,7 +53,7 @@ public final class CraftFlipRanking {
     private CraftFlipRanking() {
     }
 
-    /** Current auction ranking, best margin first. Empty until the first refresh lands. */
+    /** Current auction ranking, best have-mats/insta buy margin first. Empty until the first refresh lands. */
     public static List<RankedProduct> auctionProducts() {
         return auctionProducts;
     }
@@ -139,7 +139,12 @@ public final class CraftFlipRanking {
                     onBazaar));
         }
 
-        ranked.sort(Comparator.comparingDouble((RankedProduct product) -> product.breakdown().margin()).reversed());
+        // Auction products rank on what the craft costs you, counting materials
+        // already held; forge products keep the dashboard's buy order margin.
+        boolean auction = ProductEntry.AUCTION_PRODUCT.equals(type);
+        ranked.sort(Comparator.comparingDouble((RankedProduct product) -> auction
+                ? product.breakdown().craftMargin()
+                : product.breakdown().margin()).reversed());
         return List.copyOf(ranked);
     }
 }
