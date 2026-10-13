@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The payload of {@code GET /api/mayor-data}: the mayor, the election, the next
+ * The payload of {@code GET /api/mayor-data}: the mayor and minister, the election, the next
  * Spooky Festival, and what the notes in the server's mayor-info.json say to buy,
  * sell or watch right now, each with its price and where that price is heading.
  *
@@ -19,7 +19,12 @@ public record MayorData(
         int skyblockYear,
         String mayor,
         long termEnd,
+        String minister,
+        String ministerPerk,
         String electionLeader,
+        String electionRunnerUp,
+        String runnerUpPerk,
+        double runnerUpLeadPercent,
         long electionEndsAt,
         long spookyStartsAt,
         long spookyEndsAt,
@@ -31,7 +36,7 @@ public record MayorData(
         boolean loaded
 ) {
 
-    public static final MayorData EMPTY = new MayorData(0, "", 0L, "", 0L, 0L, 0L, null,
+    public static final MayorData EMPTY = new MayorData(0, "", 0L, "", "", "", "", "", 0D, 0L, 0L, 0L, null,
             Trend.COLLECTING, 1D, List.of(), List.of(), false);
 
     /** Top of the Bazaar's book: the buy order price and the insta-buy price. */
@@ -56,21 +61,27 @@ public record MayorData(
      * @param timing       during (the mayor in office), before (the election leader),
      *                     or after (the years following a term)
      * @param action       buy, sell or watch
+     * @param role         mayor or minister: who brings the perk
+     * @param mayor        the person, mayor or minister
+     * @param perk         the perk the notes are for
      * @param product      product list name
      * @param price        null when the server has no price for it
      * @param windowStarts for "after": when the watch starts, which is the term's end
      * @param windowEnds   for "after": when the watch ends
      */
-    public record Reminder(String timing, String action, String mayor, String product,
+    public record Reminder(String timing, String action, String role, String mayor, String perk, String product,
                            Price price, Trend trend, long windowStarts, long windowEnds) {
     }
 
-    public record Note(String timing, String mayor, String text) {
+    /** A free-text note; perk is empty for a note on the mayor rather than one perk. */
+    public record Note(String timing, String role, String mayor, String perk, String text) {
     }
 
     public static MayorData parse(JsonObject root) {
         JsonObject mayor = object(root, "mayor");
+        JsonObject minister = mayor == null ? null : object(mayor, "minister");
         JsonObject election = object(root, "election");
+        JsonObject runnerUp = election == null ? null : object(election, "runner-up");
         JsonObject spooky = object(root, "spooky-festival");
         JsonObject ectoplasm = object(root, "ectoplasm");
 
@@ -86,7 +97,9 @@ public record MayorData(
                 reminders.add(new Reminder(
                         string(reminder, "timing"),
                         string(reminder, "action"),
+                        string(reminder, "role"),
                         string(reminder, "mayor"),
+                        string(reminder, "perk"),
                         product,
                         price(object(reminder, "price")),
                         trend(object(reminder, "trend")),
@@ -101,7 +114,8 @@ public record MayorData(
             for (JsonElement element : noteArray.getAsJsonArray()) {
                 if (!element.isJsonObject()) continue;
                 JsonObject note = element.getAsJsonObject();
-                notes.add(new Note(string(note, "timing"), string(note, "mayor"), string(note, "text")));
+                notes.add(new Note(string(note, "timing"), string(note, "role"), string(note, "mayor"),
+                        string(note, "perk"), string(note, "text")));
             }
         }
 
@@ -111,7 +125,12 @@ public record MayorData(
                 (int) number(root, "sb-year"),
                 mayor == null ? "" : string(mayor, "name"),
                 mayor == null ? 0L : (long) number(mayor, "term-end"),
+                minister == null ? "" : string(minister, "name"),
+                minister == null ? "" : string(minister, "perk"),
                 election == null ? "" : string(election, "leader"),
+                runnerUp == null ? "" : string(runnerUp, "name"),
+                runnerUp == null ? "" : string(runnerUp, "perk"),
+                runnerUp == null ? 0D : number(runnerUp, "lead-percent"),
                 election == null ? 0L : (long) number(election, "ends-at"),
                 spooky == null ? 0L : (long) number(spooky, "starts-at"),
                 spooky == null ? 0L : (long) number(spooky, "ends-at"),

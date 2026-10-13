@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The Bazaar's reminder window: the mayor and the election, what your notes in
+ * The Bazaar's reminder window: the mayor, the minister and the election, what your notes in
  * mayor-info.json say to buy, sell or watch because of them, the next Spooky
  * Festival with Ectoplasm's price, and the forge.
  *
@@ -175,37 +175,37 @@ public class MarketRemindersOverlay {
                         + (data.electionLeader().isEmpty() ? "" : " §8- §f" + data.electionLeader() + " §7leading")
                 : "";
         lines.add(Line.text("§7Mayor §f" + orUnknown(data.mayor()) + election));
+        if (!data.minister().isEmpty()) {
+            lines.add(Line.text("§7Minister §f" + data.minister() + perkSuffix(data.ministerPerk())));
+        }
 
         if (data.taxMultiplier() > 1D) {
             lines.add(Line.text("§c§lBazaar tax x" + trim(data.taxMultiplier()) + " §c(Derpy's QUAD TAXES)"));
         }
 
-        // Now: the mayor in office.
-        List<MayorData.Reminder> during = byTiming(data, "during");
-        List<MayorData.Note> notes = data.notes().stream().filter(note -> "during".equals(note.timing())).toList();
-        if (!during.isEmpty() || !notes.isEmpty()) {
-            lines.add(Line.text("§8-- now: §f" + data.mayor() + " §8--"));
-            for (MayorData.Reminder reminder : during) lines.add(row(reminder));
-            for (MayorData.Note note : notes) lines.add(Line.text("§8 • §7" + note.text()));
-        }
+        // Now: the mayor and the minister in office.
+        addSection(lines, data, "during", "mayor", "§8-- now: §f" + data.mayor() + " §8--");
+        addSection(lines, data, "during", "minister",
+                "§8-- now: §f" + data.minister() + " §8(minister" + perkSuffixInside(data.ministerPerk()) + ") --");
 
-        // Coming: what to buy or sell before the election leader takes office.
-        List<MayorData.Reminder> before = byTiming(data, "before");
-        List<MayorData.Note> beforeNotes = data.notes().stream().filter(note -> "before".equals(note.timing())).toList();
-        if (!before.isEmpty() || !beforeNotes.isEmpty()) {
-            lines.add(Line.text("§8-- coming: §f" + data.electionLeader() + " §8(leading) --"));
-            for (MayorData.Reminder reminder : before) lines.add(row(reminder));
-            for (MayorData.Note note : beforeNotes) lines.add(Line.text("§8 • §7" + note.text()));
-        }
+        // Coming: what to buy or sell before the election leader takes office, and
+        // before the runner-up comes in as minister.
+        addSection(lines, data, "before", "mayor", "§8-- coming: §f" + data.electionLeader() + " §8(leading) --");
+        addSection(lines, data, "before", "minister", "§8-- coming: §f" + data.electionRunnerUp()
+                + " §8(" + runnerUpCertainty(data.runnerUpLeadPercent()) + " minister"
+                + perkSuffixInside(data.runnerUpPerk()) + ") --");
 
-        // After: one section per mayor whose aftermath is being watched.
+        // After: one section per mayor or minister whose aftermath is being watched.
         Map<String, List<MayorData.Reminder>> after = new LinkedHashMap<>();
         for (MayorData.Reminder reminder : byTiming(data, "after")) {
-            after.computeIfAbsent(reminder.mayor(), key -> new ArrayList<>()).add(reminder);
+            String heading = "minister".equals(reminder.role())
+                    ? reminder.mayor() + " §8(minister" + perkSuffixInside(reminder.perk()) + ", "
+                    : reminder.mayor() + " §8(";
+            after.computeIfAbsent(heading, key -> new ArrayList<>()).add(reminder);
         }
         for (Map.Entry<String, List<MayorData.Reminder>> section : after.entrySet()) {
             MayorData.Reminder first = section.getValue().getFirst();
-            lines.add(Line.text("§8-- after: §f" + section.getKey() + " §8(" + afterStatus(first, now) + ") --"));
+            lines.add(Line.text("§8-- after: §f" + section.getKey() + afterStatus(first, now) + ") --"));
             for (MayorData.Reminder reminder : section.getValue()) lines.add(row(reminder));
         }
 
@@ -226,6 +226,39 @@ public class MarketRemindersOverlay {
 
     private static List<MayorData.Reminder> byTiming(MayorData data, String timing) {
         return data.reminders().stream().filter(reminder -> timing.equals(reminder.timing())).toList();
+    }
+
+    /** One heading with its reminders and notes, left out when there are none. */
+    private static void addSection(List<Line> lines, MayorData data, String timing, String role, String heading) {
+        List<MayorData.Reminder> reminders = data.reminders().stream()
+                .filter(reminder -> timing.equals(reminder.timing()) && role.equals(reminder.role()))
+                .toList();
+        List<MayorData.Note> notes = data.notes().stream()
+                .filter(note -> timing.equals(note.timing()) && role.equals(note.role()))
+                .toList();
+        if (reminders.isEmpty() && notes.isEmpty()) return;
+
+        lines.add(Line.text(heading));
+        for (MayorData.Reminder reminder : reminders) lines.add(row(reminder));
+        for (MayorData.Note note : notes) lines.add(Line.text("§8 • §7" + note.text()));
+    }
+
+    /**
+     * Second place swings more than first, so how far it is ahead of third says how
+     * likely the minister is: "likely" a fifth or more ahead, "close" under that.
+     */
+    private static String runnerUpCertainty(double leadPercent) {
+        return leadPercent >= 0.2 ? "likely" : "close race for";
+    }
+
+    /** " §8(Mining Fiesta)" after a name, or nothing when the perk is unknown. */
+    private static String perkSuffix(String perk) {
+        return perk == null || perk.isEmpty() ? "" : " §8(" + perk + ")";
+    }
+
+    /** ": Mining Fiesta" inside an existing bracket, or nothing when the perk is unknown. */
+    private static String perkSuffixInside(String perk) {
+        return perk == null || perk.isEmpty() ? "" : ": " + perk;
     }
 
     private static Line row(MayorData.Reminder reminder) {
