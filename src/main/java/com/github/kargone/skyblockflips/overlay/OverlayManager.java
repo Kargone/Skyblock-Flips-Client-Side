@@ -1,12 +1,16 @@
 package com.github.kargone.skyblockflips.overlay;
 
 import com.github.kargone.skyblockflips.feature.AuctionPriceTracker;
+import com.github.kargone.skyblockflips.feature.SellOfferMarks;
 import com.github.kargone.skyblockflips.feature.ForgeTracker;
 import com.github.kargone.skyblockflips.util.ScreenConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class OverlayManager {
     static {
@@ -16,6 +20,8 @@ public class OverlayManager {
     private static final MarketRemindersOverlay remindersOverlay = new MarketRemindersOverlay();
     private static final CraftProductsOverlay auctionOverlay = CraftProductsOverlay.auction();
     private static final CraftProductsOverlay forgeOverlay = CraftProductsOverlay.forge();
+    private static final PositionsOverlay activeAuctionsOverlay = PositionsOverlay.activeAuctions();
+    private static final PositionsOverlay investmentsOverlay = PositionsOverlay.investments();
     private static final SignAmountOverlay signAmountOverlay = new SignAmountOverlay();
 
     /**
@@ -70,12 +76,34 @@ public class OverlayManager {
         }
 
         // Use contains for more flexible matching (handles color codes §)
-        if (title.contains(ScreenConstants.BAZAAR) || title.toLowerCase().contains("bazaar")) {
-            remindersOverlay.render(graphics, screen, mouseX, mouseY);
-        } else if (ScreenConstants.isAuctionScreen(title)) {
-            auctionOverlay.render(graphics, screen, mouseX, mouseY);
-        } else if (title.contains(ScreenConstants.FORGE) || title.contains(ScreenConstants.FORGE_SUB_MENU) || title.toLowerCase().contains("forge")) {
-            forgeOverlay.render(graphics, screen, mouseX, mouseY);
+        boolean bazaar = title.contains(ScreenConstants.BAZAAR) || title.toLowerCase().contains("bazaar");
+        boolean auction = !bazaar && ScreenConstants.isAuctionScreen(title);
+        boolean forge = !bazaar && !auction && (title.contains(ScreenConstants.FORGE)
+                || title.contains(ScreenConstants.FORGE_SUB_MENU) || title.toLowerCase().contains("forge"));
+        if (!bazaar && !auction && !forge) return;
+
+        // A screen can show more than one panel, so the mouse is polled once and
+        // every panel's bounds and click regions are published together. Panels
+        // added later are drawn over earlier ones and win clicks where they overlap.
+        AuctionPanelInput.pollMouse(screen, mouseX, mouseY, graphics.guiWidth(), graphics.guiHeight());
+        List<AuctionPanelInput.PanelBounds> panels = new ArrayList<>();
+        List<AuctionPanelInput.ClickTarget> targets = new ArrayList<>();
+
+        if (bazaar) {
+            // The marks themselves are drawn per slot, behind the items.
+            if (screen instanceof AbstractContainerScreen<?> container && SellOfferMarks.isOrdersScreen(title)) {
+                SellOfferMarks.remember(container);
+            }
+            investmentsOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+            remindersOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+        } else if (auction) {
+            // Drawn first, so the products panel's breakdown window stays on top.
+            activeAuctionsOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+            auctionOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+        } else {
+            forgeOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
         }
+
+        AuctionPanelInput.publish(screen, List.copyOf(panels), List.copyOf(targets));
     }
 }

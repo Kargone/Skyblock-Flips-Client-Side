@@ -1,6 +1,7 @@
 package com.github.kargone.skyblockflips.mixin;
 
 import com.github.kargone.skyblockflips.SkyblockHttpClient;
+import com.github.kargone.skyblockflips.feature.RelistAdvisor;
 import com.github.kargone.skyblockflips.flip.ServerData;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -60,6 +61,12 @@ public class ChatListenerMixin {
 
         // Debug log to see every system message and its overlay status
         System.out.println("[SkyblockFlips] Raw Message: " + content + " | Overlay: " + overlay);
+
+        // Not filtered on overlay: this client flags ordinary chat lines, Bazaar
+        // cancels included, as overlay too.
+        if (!content.startsWith(OWN_PREFIX)) {
+            RelistAdvisor.onSystemMessage(content);
+        }
 
         // If it's relevant, process it even if it's an overlay (Action Bar)
         if (isRelevant(content)) {

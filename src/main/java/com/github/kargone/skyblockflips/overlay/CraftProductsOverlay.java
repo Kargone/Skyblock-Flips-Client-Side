@@ -88,7 +88,12 @@ public class CraftProductsOverlay {
         forgeShowsBazaar = !forgeShowsBazaar;
     }
 
-    public void render(GuiGraphicsExtractor graphics, Screen screen, int mouseX, int mouseY) {
+    /**
+     * Draws the panel and adds where it drew, and what can be clicked, to
+     * {@code outPanels} and {@code targets}; {@link OverlayManager} publishes them.
+     */
+    public void render(GuiGraphicsExtractor graphics, Screen screen, int mouseX, int mouseY,
+                       List<AuctionPanelInput.PanelBounds> outPanels, List<AuctionPanelInput.ClickTarget> targets) {
         ServerData.poll();
 
         Font font = Minecraft.getInstance().font;
@@ -113,8 +118,6 @@ public class CraftProductsOverlay {
         int rows = ceilDiv(shown, columns);
 
         int panelHeight = PADDING * 2 + (SPANNING_LINES + forgeLines.size() + rows * 2) * lineHeight;
-
-        AuctionPanelInput.pollMouse(screen, mouseX, mouseY, guiWidth, guiHeight);
 
         int panelX;
         int panelY;
@@ -143,7 +146,6 @@ public class CraftProductsOverlay {
         }
 
         int rowsTop = textY + lineHeight * (2 + forgeLines.size());
-        List<AuctionPanelInput.ClickTarget> targets = new ArrayList<>();
 
         if (forgeColumns) {
             drawMarketToggle(graphics, font, textX + panelWidth - PADDING * 2, textY, lineHeight,
@@ -186,7 +188,7 @@ public class CraftProductsOverlay {
         // where the two overlap.
         breakdownWindow.render(graphics, font, mouseX, mouseY, panels.getFirst(), panels, targets);
 
-        AuctionPanelInput.publish(screen, List.copyOf(panels), List.copyOf(targets));
+        outPanels.addAll(panels);
     }
 
     private void drawProduct(GuiGraphicsExtractor graphics, Font font, CraftFlipRanking.RankedProduct product,
@@ -351,6 +353,23 @@ public class CraftProductsOverlay {
         }
         return new int[]{
                 leftSpace >= rightSpace ? layout.left() - panelWidth - 6 : layout.left() + layout.width() + 6,
+                Math.max(4, layout.top())
+        };
+    }
+
+    /**
+     * Where a panel with a side of its own sits before it has ever been dragged:
+     * just right or just left of the menu, level with its top. A side too narrow
+     * for it still gets it; the caller's clamp keeps it on screen.
+     */
+    static int[] placeBeside(GuiGraphicsExtractor graphics, Screen screen, int panelWidth, boolean right) {
+        if (!(screen instanceof AbstractContainerScreen<?> container)) {
+            return new int[]{right ? graphics.guiWidth() - panelWidth - 4 : 4, 4};
+        }
+
+        ContainerUtils.ChestLayout layout = ContainerUtils.layoutOf(container);
+        return new int[]{
+                right ? layout.left() + layout.width() + 6 : layout.left() - panelWidth - 6,
                 Math.max(4, layout.top())
         };
     }

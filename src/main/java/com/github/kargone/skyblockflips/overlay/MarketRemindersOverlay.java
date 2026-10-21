@@ -1,7 +1,9 @@
 package com.github.kargone.skyblockflips.overlay;
 
 import com.github.kargone.skyblockflips.flip.MayorData;
+import com.github.kargone.skyblockflips.flip.PositionValues;
 import com.github.kargone.skyblockflips.flip.ServerData;
+import com.github.kargone.skyblockflips.util.ModConfig;
 import com.github.kargone.skyblockflips.util.SkyblockText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -16,7 +18,8 @@ import java.util.Map;
 /**
  * The Bazaar's reminder window: the mayor, the minister and the election, what your notes in
  * mayor-info.json say to buy, sell or watch because of them, the next Spooky
- * Festival with Ectoplasm's price, and the forge.
+ * Festival with Ectoplasm's price; then, each after a break, the big long term
+ * investments that the Current Investments panel leaves out, and the forge.
  *
  * Everything in it comes from the server's {@code /api/mayor-data} and trader data:
  * which reminders apply, their prices and their trend are worked out there, so this
@@ -36,6 +39,7 @@ public class MarketRemindersOverlay {
     private static final int PANEL_BACKGROUND = 0xE0120D1C;
     private static final int PANEL_BORDER = 0xFF6B4CA8;
     private static final int HOVER_BACKGROUND = 0x40FFFFFF;
+    private static final int BREAK_COLOR = 0x806B4CA8;
 
     /**
      * One line of the window: either plain text, or a product row with a verb, a
@@ -52,19 +56,34 @@ public class MarketRemindersOverlay {
         }
     }
 
-    public void render(GuiGraphicsExtractor graphics, Screen screen, int mouseX, int mouseY) {
+    /**
+     * Draws the window and adds where it drew, and what can be clicked, to
+     * {@code panels} and {@code targets}; {@link OverlayManager} publishes them.
+     */
+    public void render(GuiGraphicsExtractor graphics, Screen screen, int mouseX, int mouseY,
+                       List<AuctionPanelInput.PanelBounds> panels, List<AuctionPanelInput.ClickTarget> targets) {
         ServerData.poll();
 
         Font font = Minecraft.getInstance().font;
         int lineHeight = font.lineHeight + 1;
         int guiWidth = graphics.guiWidth();
         int guiHeight = graphics.guiHeight();
-        int width = Math.min(WIDTH, guiWidth - 8);
-
         List<Line> lines = buildLines(ServerData.mayor(), System.currentTimeMillis());
-        int panelHeight = PADDING * 2 + lines.size() * lineHeight;
+        Table bigInvestments = PositionValues.loaded()
+                ? PositionsOverlay.investmentTable(PositionValues.bigInvestments())
+                : null;
+        List<String> forgeLines = CraftProductsOverlay.forgeLines();
 
-        AuctionPanelInput.pollMouse(screen, mouseX, mouseY, guiWidth, guiHeight);
+        // Widened for the big investments table, which has more columns than a reminder row.
+        int tableWidth = bigInvestments == null ? 0 : bigInvestments.width(font, guiWidth - 8 - PADDING * 2) + PADDING * 2;
+        int width = Math.min(Math.max(WIDTH, tableWidth), guiWidth - 8);
+
+        // A break line, a heading and the table (or "none") for the big investments;
+        // a break line and the forge lines for the forge.
+        int bigHeight = bigInvestments == null ? 0
+                : lineHeight * 2 + (bigInvestments.isEmpty() ? lineHeight : bigInvestments.height(lineHeight));
+        int forgeHeight = forgeLines.isEmpty() ? 0 : lineHeight * (1 + forgeLines.size());
+        int panelHeight = PADDING * 2 + lines.size() * lineHeight + bigHeight + forgeHeight;
 
         int panelX;
         int panelY;
@@ -72,7 +91,8 @@ public class MarketRemindersOverlay {
             panelX = PanelPosition.x(PanelPosition.Panel.REMINDERS);
             panelY = PanelPosition.y(PanelPosition.Panel.REMINDERS);
         } else {
-            int[] placement = CraftProductsOverlay.autoPlace(graphics, screen, width);
+            // Right of the menu: the Current Investments panel takes the left.
+            int[] placement = CraftProductsOverlay.placeBeside(graphics, screen, width, true);
             panelX = placement[0];
             panelY = placement[1];
         }
@@ -84,7 +104,6 @@ public class MarketRemindersOverlay {
 
         int textX = panelX + PADDING;
         int contentWidth = width - PADDING * 2;
-        List<AuctionPanelInput.ClickTarget> targets = new ArrayList<>();
 
         // Columns sized to what they hold this frame: the verb on the left, the trend
         // against the right edge with the price just before it, and the name gets
@@ -115,6 +134,31 @@ public class MarketRemindersOverlay {
             drawRow(graphics, font, line, columns, rowY, lineHeight, mouseX, mouseY, targets);
         }
 
+        int sectionY = panelY + PADDING + lines.size() * lineHeight;
+        if (bigInvestments != null) {
+            drawBreak(graphics, textX, contentWidth, sectionY, lineHeight);
+            sectionY += lineHeight;
+            graphics.text(font, "§6§lBIG INVESTMENTS §8(worth over "
+                    + SkyblockText.coins(ModConfig.bigInvestmentWorth()) + ")", textX, sectionY, 0xFFFFFFFF, true);
+            sectionY += lineHeight;
+
+            if (bigInvestments.isEmpty()) {
+                graphics.text(font, "§8none", textX, sectionY, 0xFFFFFFFF, true);
+                sectionY += lineHeight;
+            } else {
+                bigInvestments.draw(graphics, font, textX, sectionY, contentWidth, lineHeight, mouseX, mouseY, targets);
+                sectionY += bigInvestments.height(lineHeight);
+            }
+        }
+        if (!forgeLines.isEmpty()) {
+            drawBreak(graphics, textX, contentWidth, sectionY, lineHeight);
+            sectionY += lineHeight;
+            for (String forgeLine : forgeLines) {
+                graphics.text(font, SkyblockText.fit(forgeLine, contentWidth), textX, sectionY, 0xFFFFFFFF, true);
+                sectionY += lineHeight;
+            }
+        }
+
         // The year sits at the right end of the title line.
         MayorData mayor = ServerData.mayor();
         if (mayor.loaded() && mayor.skyblockYear() > 0) {
@@ -123,9 +167,13 @@ public class MarketRemindersOverlay {
                     panelY + PADDING, 0xFFFFFFFF, true);
         }
 
-        AuctionPanelInput.publish(screen,
-                List.of(new AuctionPanelInput.PanelBounds(PanelPosition.Panel.REMINDERS, panelX, panelY, width, panelHeight)),
-                List.copyOf(targets));
+        panels.add(new AuctionPanelInput.PanelBounds(PanelPosition.Panel.REMINDERS, panelX, panelY, width, panelHeight));
+    }
+
+    /** A blank line with a faint rule through its middle, between the window's sections. */
+    private static void drawBreak(GuiGraphicsExtractor graphics, int x, int width, int y, int lineHeight) {
+        int ruleY = y + lineHeight / 2 - 1;
+        graphics.fill(x, ruleY, x + width, ruleY + 1, BREAK_COLOR);
     }
 
     /** Where each column of a row starts, in gui coordinates. */
@@ -166,7 +214,6 @@ public class MarketRemindersOverlay {
             lines.add(Line.text(ServerData.lastError().isEmpty()
                     ? "§8waiting for mayor data..."
                     : "§cserver offline"));
-            addForge(lines);
             return lines;
         }
 
@@ -215,13 +262,7 @@ public class MarketRemindersOverlay {
                 : data.spookyStartsAt() > now ? "in §f" + CraftProductsOverlay.countdown(data.spookyStartsAt() - now) : "§8-";
         lines.add(Line.text("§8-- Spooky Festival " + festival + " §8--"));
         lines.add(new Line(null, null, "Ectoplasm", price(data.ectoplasmPrice()), trend(data.ectoplasmTrend())));
-
-        addForge(lines);
         return lines;
-    }
-
-    private static void addForge(List<Line> lines) {
-        for (String forgeLine : CraftProductsOverlay.forgeLines()) lines.add(Line.text(forgeLine));
     }
 
     private static List<MayorData.Reminder> byTiming(MayorData data, String timing) {

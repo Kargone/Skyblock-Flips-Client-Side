@@ -1,10 +1,12 @@
 package com.github.kargone.skyblockflips.mixin;
 
+import com.github.kargone.skyblockflips.feature.SellOfferMarks;
 import com.github.kargone.skyblockflips.overlay.AuctionPanelInput;
 import com.github.kargone.skyblockflips.overlay.OverlayManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,6 +38,16 @@ public class ContainerScreenMixin {
         if (screen.getTitle() != null) {
             OverlayManager.draw(graphics, screen, screen.getTitle().getString(), mouseX, mouseY);
         }
+    }
+
+    /** Colours a slot's background before its item is drawn, so marks sit behind items. */
+    @Inject(
+            method = "extractSlot(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/inventory/Slot;II)V",
+            at = @At("HEAD"),
+            require = 0
+    )
+    private void onExtractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
+        SellOfferMarks.drawBehind(graphics, (Screen) (Object) this, slot);
     }
 
     /**

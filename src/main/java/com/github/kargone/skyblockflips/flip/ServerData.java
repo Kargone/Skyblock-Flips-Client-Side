@@ -48,6 +48,7 @@ public final class ServerData {
     private static volatile MarketData marketData = MarketData.EMPTY;
     private static volatile InventorySnapshot investments = InventorySnapshot.EMPTY;
     private static volatile ForgeStatus forgeStatus = ForgeStatus.EMPTY;
+    private static volatile TraderPositions positions = TraderPositions.EMPTY;
     private static volatile MayorData mayorData = MayorData.EMPTY;
 
     private static volatile long productListFetchedAt = 0L;
@@ -101,6 +102,21 @@ public final class ServerData {
         quietUntil = 0L;
     }
 
+    /** The product list; {@link ProductList#EMPTY} until it arrives. */
+    public static ProductList products() {
+        return productList;
+    }
+
+    /** What is held in investments; {@link InventorySnapshot#EMPTY} until trader data arrives. */
+    public static InventorySnapshot investments() {
+        return investments;
+    }
+
+    /** Auctions, sell offers and investments as recorded; {@link TraderPositions#EMPTY} until they arrive. */
+    public static TraderPositions positions() {
+        return positions;
+    }
+
     public static boolean hasInvestments() {
         return !investments.isEmpty();
     }
@@ -136,6 +152,7 @@ public final class ServerData {
         marketData = MarketData.EMPTY;
         investments = InventorySnapshot.EMPTY;
         forgeStatus = ForgeStatus.EMPTY;
+        positions = TraderPositions.EMPTY;
         mayorData = MayorData.EMPTY;
         mayorFetchedAt = 0L;
         productListFetchedAt = 0L;
@@ -145,6 +162,7 @@ public final class ServerData {
         quietUntil = 0L;
         lastError = "";
         CraftFlipRanking.clear();
+        PositionValues.clear();
     }
 
     private static void refresh(boolean productListDue, boolean marketDue, boolean traderDue, boolean mayorDue) {
@@ -166,6 +184,7 @@ public final class ServerData {
                 JsonObject traderData = getJson("/api/trader-data");
                 investments = InventorySnapshot.parse(traderData);
                 forgeStatus = ForgeStatus.parse(traderData);
+                positions = TraderPositions.parse(traderData);
                 traderFetchedAt = now;
                 changed = true;
             }
@@ -175,6 +194,7 @@ public final class ServerData {
 
             if (changed) {
                 CraftFlipRanking.recompute(productList, marketData, investments);
+                PositionValues.recompute(productList, marketData, positions);
             }
         } catch (Exception e) {
             // The server not running is the normal case when the mod is used alone,

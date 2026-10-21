@@ -26,7 +26,9 @@ public final class PanelPosition {
         FORGE("forgePanel"),
         BREAKDOWN("breakdownPanel"),
         SIGN("signAmountButton"),
-        REMINDERS("remindersPanel");
+        REMINDERS("remindersPanel"),
+        ACTIVE_AUCTIONS("activeAuctionsPanel"),
+        INVESTMENTS("investmentsPanel");
 
         private final String configKey;
 
