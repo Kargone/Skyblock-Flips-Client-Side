@@ -16,6 +16,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +54,12 @@ public final class RelistAdvisor {
         thread.setDaemon(true);
         return thread;
     });
+
+    /**
+     * The last cost seen for each item, by normalised name. The trader data can lag
+     * behind a new or relisted offer, and without this the item would look free.
+     */
+    private static final Map<String, Double> LAST_KNOWN_COST = new ConcurrentHashMap<>();
 
     private RelistAdvisor() {
     }
@@ -129,12 +137,18 @@ public final class RelistAdvisor {
      * counted in it and are taken back out.
      */
     record Holdings(double inStorage, double refundedCost, double storageCost) {
+
+        /** False when nothing says what the items cost; a cost of 0 would show the full price as profit. */
+        boolean costKnown() {
+            return refundedCost > 0D;
+        }
     }
 
     private static Holdings holdingsAtCancel(String itemName, int refunded) {
+        String wanted = normalize(itemName);
         TraderPositions.SellOffer offer = null;
         for (TraderPositions.SellOffer candidate : ServerData.positions().sellOffers()) {
-            if (candidate.itemName().equals(itemName) && Math.round(candidate.unsold()) == refunded) {
+            if (normalize(candidate.itemName()).equals(wanted) && Math.round(candidate.unsold()) == refunded) {
                 offer = candidate;
                 break;
             }
@@ -142,23 +156,51 @@ public final class RelistAdvisor {
 
         if (offer != null) return holdingsWhileListed(offer, itemName);
 
-        InventorySnapshot.Holding holding = ServerData.investments().holdingOf(itemName);
+        InventorySnapshot.Holding holding = holdingNamed(itemName);
         double held = holding == null ? 0D : holding.amount();
         double heldCost = holding == null ? 0D : holding.unitCost();
-        return new Holdings(Math.max(0D, held - refunded), heldCost, heldCost);
+        double refundedCost = knownCost(itemName, heldCost);
+        return new Holdings(Math.max(0D, held - refunded), refundedCost, heldCost > 0D ? heldCost : refundedCost);
     }
 
     /**
      * Holdings for an offer that is still up: its whole investment is in storage, and
      * its items cost what the server recorded for it. Without a recorded offer the
-     * stored items' cost stands in for it.
+     * stored items' cost stands in for it, and failing that the last cost seen.
      */
     static Holdings holdingsWhileListed(TraderPositions.SellOffer offer, String itemName) {
-        InventorySnapshot.Holding holding = ServerData.investments()
-                .holdingOf(offer == null ? itemName : offer.investmentName());
+        InventorySnapshot.Holding holding = holdingNamed(offer == null ? itemName : offer.investmentName());
         double held = holding == null ? 0D : holding.amount();
         double heldCost = holding == null ? 0D : holding.unitCost();
-        return new Holdings(held, offer == null ? heldCost : offer.unitCost(), heldCost);
+        double refundedCost = knownCost(itemName, offer != null && offer.unitCost() > 0D ? offer.unitCost() : heldCost);
+        return new Holdings(held, refundedCost, heldCost > 0D ? heldCost : refundedCost);
+    }
+
+    /**
+     * The investment of this name, compared without symbols when there is no exact
+     * match, since a gemstone's symbol is missing from the orders menu.
+     */
+    private static InventorySnapshot.Holding holdingNamed(String name) {
+        InventorySnapshot.Holding exact = ServerData.investments().holdingOf(name);
+        if (exact != null) return exact;
+
+        String wanted = normalize(name);
+        for (TraderPositions.Investment investment : ServerData.positions().investments()) {
+            if (!normalize(investment.name()).equals(wanted)) continue;
+            InventorySnapshot.Holding holding = ServerData.investments().holdingOf(investment.name());
+            if (holding != null) return holding;
+        }
+        return null;
+    }
+
+    /** A cost found now is remembered; with none, the last one remembered is used, or 0. */
+    private static double knownCost(String itemName, double cost) {
+        String key = normalize(itemName);
+        if (cost > 0D) {
+            LAST_KNOWN_COST.put(key, cost);
+            return cost;
+        }
+        return LAST_KNOWN_COST.getOrDefault(key, 0D);
     }
 
     private static void advise(String itemName, int refunded, Holdings holdings) {
@@ -168,6 +210,10 @@ public final class RelistAdvisor {
         Double lowestOffer = lowestSellOffer(itemName);
         if (lowestOffer == null) {
             say("§7" + itemName + ": §8no Bazaar price, can't tell whether to relist");
+            return;
+        }
+        if (!holdings.costKnown()) {
+            say("§7" + itemName + ": §8no cost on record, can't tell whether to relist");
             return;
         }
 

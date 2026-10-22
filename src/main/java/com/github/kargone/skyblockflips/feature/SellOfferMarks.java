@@ -83,10 +83,11 @@ public final class SellOfferMarks {
      * What relisting an offer would make.
      *
      * @param lowest   the lowest sell offer on the Bazaar, null when there is none
-     * @param estimate null when the offer is still the lowest or has no price
-     * @param fits     how much of the unsold part fits in the inventory
+     * @param estimate  null when the offer is still the lowest, has no price or no known cost
+     * @param fits      how much of the unsold part fits in the inventory
+     * @param costKnown false when nothing says what the offer's items cost
      */
-    private record Mark(Offer offer, Double lowest, RelistAdvisor.Estimate estimate, long fits) {
+    private record Mark(Offer offer, Double lowest, RelistAdvisor.Estimate estimate, long fits, boolean costKnown) {
     }
 
     /**
@@ -164,6 +165,12 @@ public final class SellOfferMarks {
             lines.add(Component.literal("§8No Bazaar price, can't tell whether to relist"));
             return;
         }
+        if (!mark.costKnown()) {
+            lines.add(Component.literal("§cUndercut: §7lowest is §f" + price(mark.lowest())
+                    + " §7(yours " + price(mark.offer().price()) + ")"));
+            lines.add(Component.literal("§8No cost on record, can't tell whether to relist"));
+            return;
+        }
         if (mark.estimate() == null) {
             lines.add(Component.literal("§7Yours is the lowest offer §8(" + price(mark.lowest()) + ")"));
             return;
@@ -195,7 +202,7 @@ public final class SellOfferMarks {
         if (offer == null) return null;
 
         Double lowest = RelistAdvisor.lowestSellOfferById(offer.productId());
-        if (lowest == null || lowest >= offer.price() - SAME_PRICE) return new Mark(offer, lowest, null, 0L);
+        if (lowest == null || lowest >= offer.price() - SAME_PRICE) return new Mark(offer, lowest, null, 0L, true);
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) return null;
@@ -206,9 +213,10 @@ public final class SellOfferMarks {
         long fits = Math.min(offer.unsold(), space.room());
 
         RelistAdvisor.Holdings holdings = holdingsOf(offer);
+        if (!holdings.costKnown()) return new Mark(offer, lowest, null, fits, false);
         RelistAdvisor.Estimate estimate = RelistAdvisor.estimate(lowest, fits, holdings.refundedCost(),
                 holdings.inStorage(), holdings.storageCost(), space.room() - fits);
-        return new Mark(offer, lowest, estimate, fits);
+        return new Mark(offer, lowest, estimate, fits, true);
     }
 
     /**
