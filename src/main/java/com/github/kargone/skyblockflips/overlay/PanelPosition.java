@@ -28,7 +28,8 @@ public final class PanelPosition {
         SIGN("signAmountButton"),
         REMINDERS("remindersPanel"),
         ACTIVE_AUCTIONS("activeAuctionsPanel"),
-        INVESTMENTS("investmentsPanel");
+        INVESTMENTS("investmentsPanel"),
+        INVESTMENT_BREAKDOWN("investmentBreakdownPanel");
 
         private final String configKey;
 

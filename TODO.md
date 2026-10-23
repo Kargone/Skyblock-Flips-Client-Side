@@ -40,7 +40,6 @@
     - [x] Track time remaining for Forge processes (the forge menu is read and sent to the server).
     - [x] Show running forges, time left and projected profit in the forge panel and the Bazaar window.
     - [x] Place in gui which ones are best to craft (Forge Products, with an AH / BZ toggle).
-    - [ ] Send a notification (or chat message) when a Forge item is ready to claim.
     - [ ] Follow a changed end time: today a forge sped up part way through keeps its original end time
           until it shows Ready.
 
@@ -54,8 +53,8 @@
       Bazaar amount sign gets a one-click button that types it in.
 - [ ] **Auto-Sell Calculator**: Calculate if it's better to sell to NPC or Bazaar based on current prices.
 - [x] **Recipe Integration**: Pull recipe data to calculate crafting costs on the fly.
-- [ ] have the mod go read when you aren't selling the max of a material in inv
-- [ ] Minister inclusion
+- [x] have the mod go read when you aren't selling the max of a material in inv
+- [x] Minister inclusion
 
 ## Final things
 - [x] Update the readme
@@ -63,4 +62,4 @@
 - [ ] Update the fabric.mod.json (its description still only mentions sending chat messages)
 
 ## Other:
-- [ ] Control + Shift + F9 to save the hotswapped classes
+- [x] Control + Shift + F9 to save the hotswapped classes

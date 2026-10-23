@@ -44,7 +44,11 @@ public final class AuctionPanelInput {
         /** The breakdown's craft multiplier: left click lowers it, right click raises it. */
         MULTIPLIER,
         /** Switch the forge panel between Auction House and Bazaar recipes. */
-        FORGE_MARKET
+        FORGE_MARKET,
+        /** Open the lot breakdown for the investment whose key is the payload. */
+        OPEN_INVESTMENT,
+        /** Close the investment breakdown window. */
+        CLOSE_INVESTMENT
     }
 
     /** Longest a sign line can be, and so how many deletes clear one. */
@@ -233,6 +237,8 @@ public final class AuctionPanelInput {
             }
             case MULTIPLIER -> BreakdownWindow.lowerMultiplier();
             case FORGE_MARKET -> CraftProductsOverlay.toggleForgeMarket();
+            case OPEN_INVESTMENT -> InvestmentBreakdownWindow.toggle(target.payload());
+            case CLOSE_INVESTMENT -> InvestmentBreakdownWindow.close();
         }
     }
 

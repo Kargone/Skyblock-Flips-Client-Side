@@ -40,7 +40,12 @@ public final class SellOfferMarks {
 
     private static final String SELL_PREFIX = "SELL ";
     private static final Pattern OFFER_AMOUNT = Pattern.compile("Offer amount: ([\\d,]+)x");
-    private static final Pattern FILLED = Pattern.compile("Filled: ([\\d,]+)/");
+    /** "Filled: 621/2.2k (28.6%)"; past 1,000 the count is shortened too, "1.5k/2.2k". */
+    private static final Pattern FILLED = Pattern.compile("Filled: ([\\d,.]+)([kKmM]?)/\\S+(?: \\(([\\d.]+)%\\))?");
+    /** A customer line under "Customers:", "- 608x [VIP+] bubbiTV 1m ago". */
+    private static final Pattern CUSTOMER = Pattern.compile("^- ([\\d,]+)x ");
+    /** The end of a long customer list, "+ 6 others". */
+    private static final Pattern MORE_CUSTOMERS = Pattern.compile("^\\+ [\\d,]+ others?");
     private static final Pattern PRICE = Pattern.compile("Price per unit: ([\\d,.]+) coins");
     /** Prices are shown to 0.1 coins, so anything closer than this is the same price. */
     private static final double SAME_PRICE = 0.05D;
@@ -247,23 +252,58 @@ public final class SellOfferMarks {
         if (lore == null) return null;
 
         long amount = -1L;
-        long filled = 0L;
         double price = -1D;
+        Matcher fill = null;
+        long customerTotal = 0L;
+        boolean customersComplete = true;
         for (Component line : lore.lines()) {
             String text = SkyblockText.strip(line.getString());
             Matcher matcher;
             if ((matcher = OFFER_AMOUNT.matcher(text)).find()) {
                 amount = Long.parseLong(matcher.group(1).replace(",", ""));
             } else if ((matcher = FILLED.matcher(text)).find()) {
-                filled = Long.parseLong(matcher.group(1).replace(",", ""));
+                fill = matcher;
             } else if ((matcher = PRICE.matcher(text)).find()) {
                 price = Double.parseDouble(matcher.group(1).replace(",", ""));
+            } else if ((matcher = CUSTOMER.matcher(text)).find()) {
+                customerTotal += Long.parseLong(matcher.group(1).replace(",", ""));
+            } else if (MORE_CUSTOMERS.matcher(text).find()) {
+                customersComplete = false;
             }
         }
         if (amount < 0 || price < 0) return null;
 
+        long filled = fill == null ? 0L : filledAmount(fill, amount, customerTotal, customersComplete);
         return new Offer(name.substring(SELL_PREFIX.length()).trim(), productId, amount, filled, price,
                 stack.getMaxStackSize());
+    }
+
+    /**
+     * How much of an offer has sold. Hypixel's count is exact below 1,000 and shortened
+     * above it ("1.5k"), so then the customer list is summed instead, which is exact
+     * unless it ends in "+ N others". Failing that, the fill percentage is used,
+     * kept inside the range the shortened count allows and at least the customers
+     * that are listed.
+     */
+    private static long filledAmount(Matcher fill, long amount, long customerTotal, boolean customersComplete) {
+        String number = fill.group(1).replace(",", "");
+        String suffix = fill.group(2).toLowerCase(Locale.ROOT);
+        if (suffix.isEmpty() && !number.contains(".")) return Long.parseLong(number);
+        if (customersComplete && customerTotal > 0) return Math.min(amount, customerTotal);
+
+        double scale = suffix.equals("m") ? 1_000_000D : suffix.equals("k") ? 1_000D : 1D;
+        double shown = Double.parseDouble(number) * scale;
+        // One decimal of the suffix, so the real count is within half of that either side.
+        double slack = scale / 20D;
+        long low = (long) Math.ceil(shown - slack);
+        long high = (long) Math.floor(shown + slack);
+
+        long estimate = Math.round(shown);
+        if (fill.group(3) != null) {
+            estimate = Math.round(amount * Double.parseDouble(fill.group(3)) / 100D);
+            estimate = Math.clamp(estimate, low, high);
+        }
+        return Math.clamp(Math.max(estimate, customerTotal), 0L, amount);
     }
 
     private static String price(double coins) {

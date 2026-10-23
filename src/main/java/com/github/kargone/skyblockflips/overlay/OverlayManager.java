@@ -22,6 +22,7 @@ public class OverlayManager {
     private static final CraftProductsOverlay forgeOverlay = CraftProductsOverlay.forge();
     private static final PositionsOverlay activeAuctionsOverlay = PositionsOverlay.activeAuctions();
     private static final PositionsOverlay investmentsOverlay = PositionsOverlay.investments();
+    private static final InvestmentBreakdownWindow investmentBreakdown = new InvestmentBreakdownWindow();
     private static final SignAmountOverlay signAmountOverlay = new SignAmountOverlay();
 
     /**
@@ -96,6 +97,8 @@ public class OverlayManager {
             }
             investmentsOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
             remindersOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+            // Last, so it sits over both panels it can be opened from.
+            investmentBreakdown.render(graphics, mouseX, mouseY, panels, targets);
         } else if (auction) {
             // Drawn first, so the products panel's breakdown window stays on top.
             activeAuctionsOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);

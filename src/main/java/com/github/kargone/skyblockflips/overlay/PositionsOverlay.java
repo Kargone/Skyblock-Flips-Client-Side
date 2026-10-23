@@ -1,6 +1,5 @@
 package com.github.kargone.skyblockflips.overlay;
 
-import com.github.kargone.skyblockflips.flip.CraftFlipRanking;
 import com.github.kargone.skyblockflips.flip.PositionValues;
 import com.github.kargone.skyblockflips.flip.ServerData;
 import com.github.kargone.skyblockflips.util.ModConfig;
@@ -154,7 +153,7 @@ public class PositionsOverlay {
     /**
      * The Current Investments tab: profit as if every lot cost the highest price,
      * with the profit over the lots at what they really cost in brackets. Clicking
-     * a name opens it in the Bazaar.
+     * a name opens its lots in {@link InvestmentBreakdownWindow}.
      */
     static Table investmentTable(List<PositionValues.InvestmentRow> investments) {
         Table table = new Table("Item", "Type", "Amount", "Highest", "Sell", "Margin", "Profit (all lots)", "Bought");
@@ -169,7 +168,7 @@ public class PositionsOverlay {
                     priced ? signed(investment.margin()) : "§8N/A",
                     priced ? signed(investment.profitAtHighest()) + " §8(" + signed(investment.profit()) + "§8)" : "§8N/A",
                     investment.boughtAt() > 0 ? "§7" + BOUGHT_FORMAT.format(Instant.ofEpochMilli(investment.boughtAt())) : "§8-"),
-                    AuctionPanelInput.Action.BAZAAR, CraftFlipRanking.displayNameOf(investment.name())));
+                    AuctionPanelInput.Action.OPEN_INVESTMENT, investment.key()));
         }
         return table;
     }
