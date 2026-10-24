@@ -1,6 +1,7 @@
 package com.github.kargone.skyblockflips.overlay;
 
 import com.github.kargone.skyblockflips.feature.PendingAmount;
+import com.github.kargone.skyblockflips.flip.CraftFlipRanking;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -225,7 +226,7 @@ public final class AuctionPanelInput {
             case VIEW_RECIPE -> sendCommand("/viewrecipe " + target.payload());
             case BAZAAR -> {
                 PendingAmount.remember(target.payload(), target.amount());
-                sendCommand("/bazaar " + target.payload());
+                sendCommand("/bazaar " + bazaarSearchName(target.payload()));
             }
             case AH_SEARCH -> {
                 PendingAmount.remember(target.payload(), target.amount());
@@ -240,6 +241,18 @@ public final class AuctionPanelInput {
             case OPEN_INVESTMENT -> InvestmentBreakdownWindow.toggle(target.payload());
             case CLOSE_INVESTMENT -> InvestmentBreakdownWindow.close();
         }
+    }
+
+    /**
+     * What the Bazaar search should be given for an item. A forge recipe's
+     * " (forge)" is not part of the item's name, and the gemstone symbol, which
+     * the server's names carry as a "?", matches nothing in the search.
+     */
+    static String bazaarSearchName(String name) {
+        String search = CraftFlipRanking.displayNameOf(name);
+        int start = 0;
+        while (start < search.length() && !Character.isLetterOrDigit(search.charAt(start))) start++;
+        return search.substring(start).trim();
     }
 
     /** The topmost panel under the cursor; later panels are drawn over earlier ones. */

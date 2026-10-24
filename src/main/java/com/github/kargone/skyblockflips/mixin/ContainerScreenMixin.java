@@ -1,5 +1,6 @@
 package com.github.kargone.skyblockflips.mixin;
 
+import com.github.kargone.skyblockflips.feature.AuctionRankMarks;
 import com.github.kargone.skyblockflips.feature.SellOfferMarks;
 import com.github.kargone.skyblockflips.overlay.AuctionPanelInput;
 import com.github.kargone.skyblockflips.overlay.OverlayManager;
@@ -48,6 +49,16 @@ public class ContainerScreenMixin {
     )
     private void onExtractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
         SellOfferMarks.drawBehind(graphics, (Screen) (Object) this, slot);
+    }
+
+    /** Writes over a slot once its item is drawn, the way a stack count is. */
+    @Inject(
+            method = "extractSlot(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/inventory/Slot;II)V",
+            at = @At("TAIL"),
+            require = 0
+    )
+    private void onExtractSlotTail(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
+        AuctionRankMarks.drawOver(graphics, (Screen) (Object) this, slot);
     }
 
     /**
