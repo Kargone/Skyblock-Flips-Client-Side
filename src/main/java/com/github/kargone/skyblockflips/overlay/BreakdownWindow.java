@@ -2,6 +2,7 @@ package com.github.kargone.skyblockflips.overlay;
 
 import com.github.kargone.skyblockflips.flip.CostBreakdown;
 import com.github.kargone.skyblockflips.flip.CraftFlipRanking;
+import com.github.kargone.skyblockflips.flip.ProductEntry;
 import com.github.kargone.skyblockflips.flip.MaterialCost;
 import com.github.kargone.skyblockflips.flip.RecipeTally;
 import com.github.kargone.skyblockflips.util.SkyblockText;
@@ -203,8 +204,15 @@ public final class BreakdownWindow {
                 multiplierX + 2, textY, 0xFFFFFFFF, true);
         graphics.text(font, close, closeX, textY, 0xFFFFFFFF, true);
 
+        // A forge recipe cannot be opened with /viewrecipe, so its name looks up the
+        // price on whichever market it sells on instead.
+        AuctionPanelInput.Action titleAction = !ProductEntry.FORGE_PRODUCT.equals(product.entry().type())
+                ? AuctionPanelInput.Action.VIEW_RECIPE
+                : product.onBazaar() ? AuctionPanelInput.Action.BAZAAR : AuctionPanelInput.Action.AH_SEARCH;
+        String titlePayload = titleAction == AuctionPanelInput.Action.VIEW_RECIPE
+                ? product.itemId() : product.displayName();
         targets.add(new AuctionPanelInput.ClickTarget(textX, textY, nameWidth, lineHeight,
-                AuctionPanelInput.Action.VIEW_RECIPE, product.itemId(), 0));
+                titleAction, titlePayload, 0));
         targets.add(new AuctionPanelInput.ClickTarget(multiplierX, textY - 1, multiplierWidth, lineHeight,
                 AuctionPanelInput.Action.MULTIPLIER, "", 0));
         targets.add(new AuctionPanelInput.ClickTarget(closeX, textY, closeWidth, lineHeight,
