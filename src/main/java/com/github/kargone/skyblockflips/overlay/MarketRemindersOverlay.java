@@ -1,7 +1,9 @@
 package com.github.kargone.skyblockflips.overlay;
 
+import com.github.kargone.skyblockflips.flip.CraftCostModel;
 import com.github.kargone.skyblockflips.flip.MayorData;
 import com.github.kargone.skyblockflips.flip.PositionValues;
+import com.github.kargone.skyblockflips.flip.ProductEntry;
 import com.github.kargone.skyblockflips.flip.ServerData;
 import com.github.kargone.skyblockflips.util.ModConfig;
 import com.github.kargone.skyblockflips.util.SkyblockText;
@@ -23,7 +25,9 @@ import java.util.Map;
  *
  * Everything in it comes from the server's {@code /api/mayor-data} and trader data:
  * which reminders apply, their prices and their trend are worked out there, so this
- * only lays them out. Clicking a product opens it in the Bazaar. The window can be
+ * only lays them out. The exception is a product the Bazaar does not carry, which the
+ * server has no price for: it shows its lowest BIN instead. Clicking a product opens it
+ * in the Bazaar, or searches the Auction House for one of those. The window can be
  * dragged anywhere and remembers where it was put.
  */
 public class MarketRemindersOverlay {
@@ -45,10 +49,10 @@ public class MarketRemindersOverlay {
      * One line of the window: either plain text, or a product row with a verb, a
      * clickable name, its price and its trend.
      */
-    private record Line(String text, String verb, String product, String price, String trend) {
+    private record Line(String text, String verb, String product, String price, String trend, boolean auction) {
 
         static Line text(String text) {
-            return new Line(text, null, null, null, null);
+            return new Line(text, null, null, null, null, false);
         }
 
         boolean isRow() {
@@ -203,7 +207,8 @@ public class MarketRemindersOverlay {
         graphics.text(font, line.trend(), columns.trendX(), rowY, 0xFFFFFFFF, true);
 
         targets.add(new AuctionPanelInput.ClickTarget(nameX, rowY, nameWidth, lineHeight,
-                AuctionPanelInput.Action.BAZAAR, line.product(), 0));
+                line.auction() ? AuctionPanelInput.Action.AH_SEARCH : AuctionPanelInput.Action.BAZAAR,
+                line.product(), 0));
     }
 
     private static List<Line> buildLines(MayorData data, long now) {
@@ -261,7 +266,7 @@ public class MarketRemindersOverlay {
                 ? "§aon now"
                 : data.spookyStartsAt() > now ? "in §f" + CraftProductsOverlay.countdown(data.spookyStartsAt() - now) : "§8-";
         lines.add(Line.text("§8-- Spooky Festival " + festival + " §8--"));
-        lines.add(new Line(null, null, "Ectoplasm", price(data.ectoplasmPrice()), trend(data.ectoplasmTrend())));
+        lines.add(new Line(null, null, "Ectoplasm", price(data.ectoplasmPrice()), trend(data.ectoplasmTrend()), false));
         return lines;
     }
 
@@ -308,7 +313,18 @@ public class MarketRemindersOverlay {
             case "sell" -> "§csell";
             default -> "§ewatch";
         };
-        return new Line(null, verb, reminder.product(), price(reminder.price()), trend(reminder.trend()));
+        Double lowestBin = reminder.price() == null ? lowestBinOf(reminder.product()) : null;
+        if (lowestBin != null) {
+            // The server only follows Bazaar prices, so there is no trend to show.
+            return new Line(null, verb, reminder.product(), "§f" + SkyblockText.coins(lowestBin), "§8lbin", true);
+        }
+        return new Line(null, verb, reminder.product(), price(reminder.price()), trend(reminder.trend()), false);
+    }
+
+    /** The product's lowest BIN, or null when none is listed. */
+    private static Double lowestBinOf(String product) {
+        ProductEntry entry = ServerData.products().get(product);
+        return ServerData.market().lowestBin(CraftCostModel.normalizeName(product, entry == null ? null : entry.tier()));
     }
 
     /** "ends in 3d 2h, watch 2y" before the watch starts, "6d 4h left" once it has. */
