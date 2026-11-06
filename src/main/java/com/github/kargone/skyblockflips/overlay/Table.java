@@ -23,9 +23,14 @@ final class Table {
 
     /**
      * One row. The first cell is a plain name; the table colours it, and when
-     * {@code action} is set, clicking it does that with {@code payload}.
+     * {@code action} is set, clicking it does that with {@code payload} and
+     * {@code amount}, the quantity it refers to, 0 when it refers to none.
      */
-    record Row(List<String> cells, AuctionPanelInput.Action action, String payload) {
+    record Row(List<String> cells, AuctionPanelInput.Action action, String payload, int amount) {
+
+        Row(List<String> cells, AuctionPanelInput.Action action, String payload) {
+            this(cells, action, payload, 0);
+        }
     }
 
     private final List<String> headers;
@@ -76,7 +81,7 @@ final class Table {
 
             if (row.action() != null) {
                 targets.add(new AuctionPanelInput.ClickTarget(x, rowY, nameWidth, lineHeight,
-                        row.action(), row.payload(), 0));
+                        row.action(), row.payload(), row.amount()));
             }
         }
     }

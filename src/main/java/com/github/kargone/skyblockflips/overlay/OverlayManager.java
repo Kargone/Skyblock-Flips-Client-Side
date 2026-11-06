@@ -23,6 +23,7 @@ public class OverlayManager {
     private static final PositionsOverlay activeAuctionsOverlay = PositionsOverlay.activeAuctions();
     private static final PositionsOverlay investmentsOverlay = PositionsOverlay.investments();
     private static final InvestmentBreakdownWindow investmentBreakdown = new InvestmentBreakdownWindow();
+    private static final OptimizerOverlay optimizerOverlay = new OptimizerOverlay();
     private static final SignAmountOverlay signAmountOverlay = new SignAmountOverlay();
 
     /**
@@ -97,6 +98,8 @@ public class OverlayManager {
             }
             investmentsOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
             remindersOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
+            // After the investments panel, which it places itself under.
+            optimizerOverlay.render(graphics, screen, mouseX, mouseY, panels, targets);
             // Last, so it sits over both panels it can be opened from.
             investmentBreakdown.render(graphics, mouseX, mouseY, panels, targets);
         } else if (auction) {

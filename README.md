@@ -40,6 +40,7 @@ when the server is not running; the panels say so instead of retrying every fram
 | `GET /api/market-data` | Bazaar order books and lowest BIN prices | 1 min |
 | `GET /api/trader-data` | held materials ("have"), running forges, forge profit | 15 s, or straight away after a forge change |
 | `GET /api/mayor-data` | mayor, election, Spooky Festival, reminders, tax multiplier | 1 min |
+| `GET /api/recommendation` | the optimizer's orders to place | 30 s |
 | `POST /` | chat messages and forge snapshots | as they happen |
 
 The server's address is `serverUrl` in `config/skyblockflips.json`, read once when the game starts
@@ -180,6 +181,24 @@ Prices are Bazaar buy order / insta-buy. Clicking a product opens it in the Baza
 QUAD TAXES perk is active, a red line says so, and the tax multiplier switches to 4 automatically in
 the mod, the server and the dashboard.
 
+### Bazaar: Optimizer
+
+Bazaar menus also get a window of the orders the server's optimizer says to place next, most expected
+profit first, under the Current Investments panel by default:
+
+```
+BAZAAR OPTIMIZER                                  12s ago
+Purse 913.77M | Slots 6 | Cap left 9.96B | Profit +8.42M
+Item            Order  Amount    Price  Exp. fill  Exp. profit
+Enchanted Coal   sell   2.00K   1.92K      1.40K       +1.31M
+Hamster Wheel     buy     640  18.40K        640       +1.02M
+```
+
+Amount is how many to list; Exp. fill is how many should fill before the next flip, and the profit is
+on those. The age in the title turns red once the list is over 3 minutes old, which means the optimizer
+has stopped. Clicking an item opens it in the Bazaar; for a buy order, the amount sign's green button
+then offers its Amount. Sell offers list the whole holding, so they have no amount to fill in.
+
 ### Moving the panels
 
 Press anywhere on a panel and drag it. Positions are saved to `config/skyblockflips.json` when you let
@@ -193,14 +212,15 @@ placement for that panel. Clicks on a panel never reach the menu underneath.
 | `breakdownPanel` | breakdown window |
 | `signAmountButton` | amount sign button |
 | `remindersPanel` | Market Reminders |
+| `optimizerPanel` | Bazaar Optimizer |
 
 ## Code map
 
 | Package | What lives there |
 | --- | --- |
 | `mixin` | `ChatListenerMixin` (chat capture), `ContainerScreenMixin` / `ScreenMixin` / `SignEditScreenMixin` (draw overlays, take panel clicks) |
-| `overlay` | `OverlayManager` (which overlay goes on which menu), `CraftProductsOverlay`, `BreakdownWindow`, `MarketRemindersOverlay`, `SignAmountOverlay`, `AuctionPanelInput` (dragging and clicks for every panel), `PanelPosition` |
-| `flip` | `ServerData` (fetching), `CraftCostModel` (port of the dashboard's cost functions), `CraftFlipRanking`, `ForgeStatus`, `MayorData`, `SkyblockFees` |
+| `overlay` | `OverlayManager` (which overlay goes on which menu), `CraftProductsOverlay`, `BreakdownWindow`, `MarketRemindersOverlay`, `OptimizerOverlay`, `SignAmountOverlay`, `AuctionPanelInput` (dragging and clicks for every panel), `PanelPosition` |
+| `flip` | `ServerData` (fetching), `CraftCostModel` (port of the dashboard's cost functions), `CraftFlipRanking`, `ForgeStatus`, `MayorData`, `Recommendation`, `SkyblockFees` |
 | `feature` | `ForgeTracker`, `AuctionPriceTracker`, `PendingAmount` |
 | `util` | `SkyblockText` (formatting that matches the dashboard's `formatCoin`), `ContainerUtils`, `ScreenConstants` |
 

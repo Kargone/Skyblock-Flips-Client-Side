@@ -33,6 +33,8 @@ public final class ServerData {
     private static final long TRADER_TTL_MS = 15 * 1000L;
     /** Mayor reminders: prices move slowly and the timers count down locally. */
     private static final long MAYOR_TTL_MS = 60 * 1000L;
+    /** The optimizer writes a new recommendation every 30 seconds. */
+    private static final long RECOMMENDATION_TTL_MS = 30 * 1000L;
     /** How long to stay quiet after the server turns out not to be running. */
     private static final long BACKOFF_MS = 30 * 1000L;
 
@@ -50,12 +52,15 @@ public final class ServerData {
     private static volatile ForgeStatus forgeStatus = ForgeStatus.EMPTY;
     private static volatile TraderPositions positions = TraderPositions.EMPTY;
     private static volatile MayorData mayorData = MayorData.EMPTY;
+    private static volatile Recommendation recommendation = Recommendation.EMPTY;
 
     private static volatile long productListFetchedAt = 0L;
     private static volatile long marketFetchedAt = 0L;
     private static volatile long traderFetchedAt = 0L;
     private static volatile long mayorFetchedAt = 0L;
     private static volatile String lastMayorError = "";
+    private static volatile long recommendationFetchedAt = 0L;
+    private static volatile String lastRecommendationError = "";
     private static volatile long lastSuccessAt = 0L;
     private static volatile long quietUntil = 0L;
     private static volatile String lastError = "";
@@ -86,6 +91,11 @@ public final class ServerData {
     /** Mayor reminders and timers; {@link MayorData#EMPTY} until they arrive. */
     public static MayorData mayor() {
         return mayorData;
+    }
+
+    /** The optimizer's orders to place; {@link Recommendation#EMPTY} until they arrive. */
+    public static Recommendation recommendation() {
+        return recommendation;
     }
 
     /** What is forging, from the trader data; {@link ForgeStatus#EMPTY} until it arrives. */
@@ -133,12 +143,14 @@ public final class ServerData {
         boolean marketDue = now - marketFetchedAt > MARKET_TTL_MS;
         boolean traderDue = now - traderFetchedAt > TRADER_TTL_MS;
         boolean mayorDue = now - mayorFetchedAt > MAYOR_TTL_MS;
-        if (!productListDue && !marketDue && !traderDue && !mayorDue) return;
+        boolean recommendationDue = now - recommendationFetchedAt > RECOMMENDATION_TTL_MS;
+        if (!productListDue && !marketDue && !traderDue && !mayorDue && !recommendationDue) return;
 
         if (!REFRESHING.compareAndSet(false, true)) return;
 
         WORKER.execute(() -> {
             try {
+                if (recommendationDue) refreshRecommendation(now);
                 refresh(productListDue, marketDue, traderDue, mayorDue);
             } finally {
                 REFRESHING.set(false);
@@ -155,6 +167,8 @@ public final class ServerData {
         positions = TraderPositions.EMPTY;
         mayorData = MayorData.EMPTY;
         mayorFetchedAt = 0L;
+        recommendation = Recommendation.EMPTY;
+        recommendationFetchedAt = 0L;
         productListFetchedAt = 0L;
         marketFetchedAt = 0L;
         traderFetchedAt = 0L;
@@ -234,6 +248,25 @@ public final class ServerData {
             }
         }
         return false;
+    }
+
+    /**
+     * Fetches the optimizer's orders. Kept apart from the other feeds, like the mayor
+     * data, so a failure here costs only this panel. A failed fetch leaves the last
+     * list in place; the panel shows how old it is.
+     */
+    private static void refreshRecommendation(long now) {
+        recommendationFetchedAt = now;
+        try {
+            recommendation = Recommendation.parse(getJson("/api/recommendation"));
+            lastRecommendationError = "";
+        } catch (Exception e) {
+            String message = String.valueOf(e.getMessage());
+            if (!message.equals(lastRecommendationError)) {
+                lastRecommendationError = message;
+                System.out.println("[SkyblockFlips] Optimizer recommendation unavailable: " + message);
+            }
+        }
     }
 
     private static JsonObject getJson(String path) throws Exception {

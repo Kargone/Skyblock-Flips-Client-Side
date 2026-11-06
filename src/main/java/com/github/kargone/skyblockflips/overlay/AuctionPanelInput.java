@@ -225,6 +225,9 @@ public final class AuctionPanelInput {
             case CLOSE_BREAKDOWN -> BreakdownWindow.close();
             case VIEW_RECIPE -> sendCommand("/viewrecipe " + target.payload());
             case BAZAAR -> {
+                // Cleared first, so an item with no amount cannot inherit the last
+                // item's number on a sign that is asking for something else.
+                PendingAmount.clear();
                 PendingAmount.remember(target.payload(), target.amount());
                 sendCommand("/bazaar " + bazaarSearchName(target.payload()));
             }

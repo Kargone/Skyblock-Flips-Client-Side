@@ -29,7 +29,8 @@ public final class PanelPosition {
         REMINDERS("remindersPanel"),
         ACTIVE_AUCTIONS("activeAuctionsPanel"),
         INVESTMENTS("investmentsPanel"),
-        INVESTMENT_BREAKDOWN("investmentBreakdownPanel");
+        INVESTMENT_BREAKDOWN("investmentBreakdownPanel"),
+        OPTIMIZER("optimizerPanel");
 
         private final String configKey;
 
