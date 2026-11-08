@@ -3,6 +3,7 @@
 run/
 build/
 .gradle/
+.mcp.json
 
 out/
 .artifacts/
