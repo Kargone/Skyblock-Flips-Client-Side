@@ -1,5 +1,7 @@
 package com.github.kargone.skyblockflips.overlay;
 
+import com.github.kargone.skyblockflips.flip.MarketData;
+import com.github.kargone.skyblockflips.flip.ProductEntry;
 import com.github.kargone.skyblockflips.flip.Recommendation;
 import com.github.kargone.skyblockflips.flip.ServerData;
 import com.github.kargone.skyblockflips.util.SkyblockText;
@@ -137,7 +139,7 @@ public class OptimizerOverlay {
     }
 
     private static Table orderTable(List<Recommendation.Order> orders) {
-        Table table = new Table("Item", "Order", "Amount", "Price", "Exp. fill", "Exp. profit");
+        Table table = new Table("Item", "Order", "Amount", "Price", "Exp. fill", "Exp. profit", "Vol 7d buy / sell");
         for (Recommendation.Order order : orders) {
             boolean sell = "sell".equals(order.action());
             table.add(new Table.Row(List.of(
@@ -146,12 +148,25 @@ public class OptimizerOverlay {
                     "§f" + SkyblockText.coins(order.quantity()),
                     "§f" + SkyblockText.coins(order.orderPrice()),
                     "§7" + SkyblockText.coins(order.expectedFill()),
-                    signed(order.expectedProfit())),
+                    signed(order.expectedProfit()),
+                    volume(order.productName())),
                     // A sell offer lists the whole holding and its only sign is the
                     // price, so only a buy order has an amount to fill in.
                     AuctionPanelInput.Action.BAZAAR, order.productName(), sell ? 0 : (int) order.quantity()));
         }
         return table;
+    }
+
+    /**
+     * The dashboard's Volume column: units bought / sold on the Bazaar over the last
+     * 7 days, from Hypixel's quick status. A dash until the market data arrives.
+     */
+    private static String volume(String productName) {
+        ProductEntry entry = ServerData.products().get(productName);
+        MarketData.BazaarQuote quote = entry == null || !entry.hasApiName()
+                ? null : ServerData.market().bazaarQuote(entry.apiName());
+        if (quote == null) return "§8-";
+        return "§7" + SkyblockText.coins(quote.buyMovingWeek()) + " §8/ §7" + SkyblockText.coins(quote.sellMovingWeek());
     }
 
     private static String signed(double amount) {

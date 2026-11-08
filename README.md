@@ -187,15 +187,15 @@ Bazaar menus also get a window of the orders the server's optimizer says to plac
 profit first, under the Current Investments panel by default:
 
 ```
-BAZAAR OPTIMIZER                                  12s ago
+BAZAAR OPTIMIZER                                                    12s ago
 Purse 913.77M | Slots 6 | Cap left 9.96B | Profit +8.42M
-Item            Order  Amount    Price  Exp. fill  Exp. profit
-Enchanted Coal   sell   2.00K   1.92K      1.40K       +1.31M
-Hamster Wheel     buy     640  18.40K        640       +1.02M
+Item            Order  Amount    Price  Exp. fill  Exp. profit  Vol 7d buy / sell
+Enchanted Coal   sell   2.00K   1.92K      1.40K       +1.31M      1.20M / 980.50K
+Hamster Wheel     buy     640  18.40K        640       +1.02M       12.40K / 9.80K
 ```
 
 Amount is how many to list; Exp. fill is how many should fill before the next flip, and the profit is
-on those. The age in the title turns red once the list is over 3 minutes old, which means the optimizer
+on those. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age in the title turns red once the list is over 3 minutes old, which means the optimizer
 has stopped. Clicking an item opens it in the Bazaar; for a buy order, the amount sign's green button
 then offers its Amount. Sell offers list the whole holding, so they have no amount to fill in.
 

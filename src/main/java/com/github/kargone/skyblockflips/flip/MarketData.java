@@ -26,8 +26,11 @@ public final class MarketData {
      *
      * @param buySummaryTop  first {@code buy_summary} price level
      * @param sellSummaryTop first {@code sell_summary} price level
+     * @param buyMovingWeek  {@code quick_status.buyMovingWeek}, units bought over the last 7 days
+     * @param sellMovingWeek {@code quick_status.sellMovingWeek}, units sold over the last 7 days
      */
-    public record BazaarQuote(double buySummaryTop, double sellSummaryTop) {
+    public record BazaarQuote(double buySummaryTop, double sellSummaryTop,
+                              double buyMovingWeek, double sellMovingWeek) {
     }
 
     private final Map<String, BazaarQuote> bazaarProducts;
@@ -84,9 +87,12 @@ public final class MarketData {
             for (Map.Entry<String, JsonElement> entry : bazaar.entrySet()) {
                 if (!entry.getValue().isJsonObject()) continue;
                 JsonObject product = entry.getValue().getAsJsonObject();
+                JsonObject quickStatus = optionalObject(product, "quick_status");
                 products.put(entry.getKey(), new BazaarQuote(
                         topOfBook(product, "buy_summary"),
-                        topOfBook(product, "sell_summary")
+                        topOfBook(product, "sell_summary"),
+                        quickStatus == null ? 0D : orZero(asDouble(quickStatus.get("buyMovingWeek"))),
+                        quickStatus == null ? 0D : orZero(asDouble(quickStatus.get("sellMovingWeek")))
                 ));
             }
         }
@@ -139,6 +145,10 @@ public final class MarketData {
     private static JsonObject optionalObject(JsonObject root, String name) {
         JsonElement element = root.get(name);
         return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+    }
+
+    private static double orZero(Double value) {
+        return value == null ? 0D : value;
     }
 
     private static Double asDouble(JsonElement element) {
