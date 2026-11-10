@@ -40,7 +40,7 @@ when the server is not running; the panels say so instead of retrying every fram
 | `GET /api/market-data` | Bazaar order books and lowest BIN prices | 1 min |
 | `GET /api/trader-data` | held materials ("have"), running forges, forge profit | 15 s, or straight away after a forge change |
 | `GET /api/mayor-data` | mayor, election, Spooky Festival, reminders, tax multiplier | 1 min |
-| `GET /api/recommendation` | the optimizer's orders to place | 30 s |
+| `GET /api/recommendation` | the optimizer's orders to place | 5 s |
 | `POST /` | chat messages and forge snapshots | as they happen |
 
 The server's address is `serverUrl` in `config/skyblockflips.json`, read once when the game starts
@@ -185,7 +185,8 @@ the mod, the server and the dashboard.
 
 Bazaar menus also get a window of the buy orders the server's optimizer ranks best, under the
 Current Investments panel by default. The optimizer sorts its orders into order size buckets; the
-window shows the top 5 of each, smallest first (1k+500, 2k, 4k, 7k), with a line between buckets:
+window shows the top orders of each, smallest first, with a line between buckets: the top 5 of 1k+500
+and 2k, and the top 7 of 4k and 7k.
 
 ```
 BAZAAR OPTIMIZER                                                    12s ago
@@ -197,7 +198,7 @@ Hyper Catalyst      buy   2.00K 211.30K      +11.68M       12.40K / 9.80K
 ```
 
 Within a bucket the optimizer's order is kept: orders that pass its margin and order book checks
-first, best margin first. When a bucket has fewer than 5 that pass, failing ones fill it in, greyed
+first, best margin first. When a bucket has fewer passing orders than it shows, failing ones fill it in, greyed
 out. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age
 in the title turns red once the list is over 3 minutes old, which means the optimizer has stopped.
 Clicking an item opens it in the Bazaar, and the amount sign's green button then offers its Amount.

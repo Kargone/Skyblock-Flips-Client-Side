@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * The Bazaar's optimizer window: the buy orders the server's optimizer ranks best,
  * from {@code /api/recommendation}. The orders come grouped by order size bucket;
- * this shows the top {@value #PER_BUCKET} of each, smallest first, with a line
+ * this shows the top few of each (see {@link #BUCKETS}), smallest first, with a line
  * between buckets. The ranking is the optimizer's; this only lays it out.
  *
  * Sits under the Current Investments panel by default. Clicking an item opens it in
@@ -28,10 +28,17 @@ public class OptimizerOverlay {
     private static final int MIN_WIDTH = 160;
 
     /** The buckets in the order they are shown, by the optimizer's {@code display_bucket} names. */
-    private static final List<String> BUCKETS = List.of("1k+500", "2k", "4k", "7k");
-    private static final int PER_BUCKET = 5;
+    private static final List<Bucket> BUCKETS = List.of(
+            new Bucket("1k+500", 5),
+            new Bucket("2k", 5),
+            new Bucket("4k", 7),
+            new Bucket("7k", 7));
 
-    /** The optimizer writes every 30 seconds, so this much older means it has stopped. */
+    /** One bucket and how many of its top orders are shown. */
+    private record Bucket(String name, int shown) {
+    }
+
+    /** The optimizer writes every few seconds, so this much older means it has stopped. */
     private static final long STALE_MS = 3 * 60 * 1000L;
 
     private static final int PANEL_BACKGROUND = 0xE0120D1C;
@@ -135,14 +142,14 @@ public class OptimizerOverlay {
     /**
      * The top orders of each bucket, in the optimizer's order: the ones that pass
      * its checks first, best margin first. When a bucket has fewer than
-     * {@value #PER_BUCKET} that pass, the failing ones fill in, greyed out.
+     * its share that pass, the failing ones fill in, greyed out.
      */
     private static Table orderTable(List<Recommendation.Order> orders) {
         Table table = new Table("Item", "Order", "Amount", "Price", "Exp. profit", "Vol 7d buy / sell");
-        for (String bucket : BUCKETS) {
+        for (Bucket bucket : BUCKETS) {
             List<Recommendation.Order> top = orders.stream()
-                    .filter(order -> bucket.equals(order.bucket()))
-                    .limit(PER_BUCKET)
+                    .filter(order -> bucket.name().equals(order.bucket()))
+                    .limit(bucket.shown())
                     .toList();
             if (top.isEmpty()) continue;
 

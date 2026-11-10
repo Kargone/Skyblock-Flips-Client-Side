@@ -34,7 +34,7 @@ public final class ServerData {
     /** Mayor reminders: prices move slowly and the timers count down locally. */
     private static final long MAYOR_TTL_MS = 60 * 1000L;
     /** The optimizer writes a new recommendation every 30 seconds. */
-    private static final long RECOMMENDATION_TTL_MS = 30 * 1000L;
+    private static final long RECOMMENDATION_TTL_MS = 5 * 1000L;
     /** How long to stay quiet after the server turns out not to be running. */
     private static final long BACKOFF_MS = 30 * 1000L;
 
