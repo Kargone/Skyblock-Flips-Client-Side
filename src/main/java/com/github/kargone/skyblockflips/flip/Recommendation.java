@@ -7,14 +7,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The payload of {@code GET /api/recommendation}: the orders the server's optimizer
- * says to place next, most expected profit first, and what it had to work with.
+ * The payload of {@code GET /api/recommendation}: every buy order the server's
+ * optimizer considered, grouped by order size bucket and ranked within each one,
+ * and what it had to work with.
  *
- * The optimizer ({@code optimizer/main.py}) works all of that out; this only reads it.
+ * The optimizer ({@code optimizer/main.py}) does the ranking; this only reads it,
+ * keeping the server's order.
  *
- * @param available  false when the optimizer has not written a recommendation yet
+ * @param available   false when the optimizer has not written a recommendation yet
  * @param generatedAt epoch millis the optimizer wrote this, 0 when unknown
- * @param loaded     false until the server has answered
+ * @param qualified   how many orders pass the optimizer's margin and order book checks
+ * @param loaded      false until the server has answered
  */
 public record Recommendation(
         boolean available,
@@ -22,25 +25,26 @@ public record Recommendation(
         double purse,
         int availableSlots,
         double dailyCapRemaining,
-        double totalExpectedProfit,
+        int qualified,
         List<Order> orders,
         boolean loaded
 ) {
 
-    public static final Recommendation EMPTY = new Recommendation(false, 0L, 0D, 0, 0D, 0D, List.of(), false);
+    public static final Recommendation EMPTY = new Recommendation(false, 0L, 0D, 0, 0D, 0, List.of(), false);
 
     /**
      * One order to place.
      *
      * @param action         buy or sell
      * @param productName    product list name
-     * @param quantity       units to list: the full holding for a sell, the expected fill for a buy
-     * @param expectedFill   units expected to fill before the next flip, which is what the profit is on
+     * @param quantity       units to list
      * @param orderPrice     coins per unit
      * @param expectedProfit coins, after tax
+     * @param bucket         the display bucket it is ranked in: 7k, 4k, 2k or 1k+500
+     * @param qualified      false when it failed a check and is only ranked behind the ones that passed
      */
-    public record Order(String action, String productName, long quantity, double expectedFill,
-                        double orderPrice, double expectedProfit) {
+    public record Order(String action, String productName, long quantity, double orderPrice,
+                        double expectedProfit, String bucket, boolean qualified) {
     }
 
     public static Recommendation parse(JsonObject root) {
@@ -57,22 +61,27 @@ public record Recommendation(
                         string(order, "action"),
                         product,
                         (long) number(order, "quantity"),
-                        number(order, "expected_fill"),
                         number(order, "order_price"),
-                        number(order, "expected_profit")));
+                        number(order, "expected_profit"),
+                        string(order, "display_bucket"),
+                        bool(order, "qualified")));
             }
         }
 
-        JsonElement available = root.get("available");
         return new Recommendation(
-                available != null && available.isJsonPrimitive() && available.getAsBoolean(),
+                bool(root, "available"),
                 (long) number(root, "generated_at"),
                 number(root, "purse"),
                 (int) number(root, "available_slots"),
                 number(root, "daily_cap_remaining"),
-                number(root, "total_expected_profit"),
+                (int) number(root, "n_qualified"),
                 List.copyOf(orders),
                 true);
+    }
+
+    private static boolean bool(JsonObject parent, String name) {
+        JsonElement element = parent.get(name);
+        return element != null && element.isJsonPrimitive() && element.getAsBoolean();
     }
 
     private static String string(JsonObject parent, String name) {

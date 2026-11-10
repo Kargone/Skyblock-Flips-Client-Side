@@ -183,21 +183,24 @@ the mod, the server and the dashboard.
 
 ### Bazaar: Optimizer
 
-Bazaar menus also get a window of the orders the server's optimizer says to place next, most expected
-profit first, under the Current Investments panel by default:
+Bazaar menus also get a window of the buy orders the server's optimizer ranks best, under the
+Current Investments panel by default. The optimizer sorts its orders into order size buckets; the
+window shows the top 5 of each, smallest first (1k+500, 2k, 4k, 7k), with a line between buckets:
 
 ```
 BAZAAR OPTIMIZER                                                    12s ago
-Purse 913.77M | Slots 6 | Cap left 9.96B | Profit +8.42M
-Item            Order  Amount    Price  Exp. fill  Exp. profit  Vol 7d buy / sell
-Enchanted Coal   sell   2.00K   1.92K      1.40K       +1.31M      1.20M / 980.50K
-Hamster Wheel     buy     640  18.40K        640       +1.02M       12.40K / 9.80K
+Purse 4.79B | Slots 24 | Cap left 15.00B | Passing 62
+Item              Order  Amount    Price  Exp. profit  Vol 7d buy / sell
+Enchanted Melon     buy   1.00K   1.92K       +1.31M      1.20M / 980.50K
+------------------------------------------------------------------------
+Hyper Catalyst      buy   2.00K 211.30K      +11.68M       12.40K / 9.80K
 ```
 
-Amount is how many to list; Exp. fill is how many should fill before the next flip, and the profit is
-on those. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age in the title turns red once the list is over 3 minutes old, which means the optimizer
-has stopped. Clicking an item opens it in the Bazaar; for a buy order, the amount sign's green button
-then offers its Amount. Sell offers list the whole holding, so they have no amount to fill in.
+Within a bucket the optimizer's order is kept: orders that pass its margin and order book checks
+first, best margin first. When a bucket has fewer than 5 that pass, failing ones fill it in, greyed
+out. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age
+in the title turns red once the list is over 3 minutes old, which means the optimizer has stopped.
+Clicking an item opens it in the Bazaar, and the amount sign's green button then offers its Amount.
 
 ### Moving the panels
 

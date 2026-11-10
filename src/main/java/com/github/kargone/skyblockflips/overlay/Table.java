@@ -5,7 +5,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A dashboard style table for the overlay panels: a header row, then one line per
@@ -20,6 +22,7 @@ final class Table {
     private static final int MAX_NAME_WIDTH = 120;
     private static final int MIN_NAME_WIDTH = 40;
     private static final int HOVER_BACKGROUND = 0x40FFFFFF;
+    private static final int BREAK_COLOR = 0x806B4CA8;
 
     /**
      * One row. The first cell is a plain name; the table colours it, and when
@@ -35,6 +38,8 @@ final class Table {
 
     private final List<String> headers;
     private final List<Row> rows = new ArrayList<>();
+    /** Indexes of the rows that have a divider line just above them. */
+    private final Set<Integer> breaks = new HashSet<>();
 
     Table(String... headers) {
         this.headers = List.of(headers);
@@ -44,13 +49,18 @@ final class Table {
         rows.add(row);
     }
 
+    /** A faint line between the rows added so far and the next one; none above the first row. */
+    void addBreak() {
+        if (!rows.isEmpty()) breaks.add(rows.size());
+    }
+
     boolean isEmpty() {
         return rows.isEmpty();
     }
 
-    /** The header line plus one line per row. */
+    /** The header line plus one line per row and per divider. */
     int height(int lineHeight) {
-        return (rows.size() + 1) * lineHeight;
+        return (rows.size() + 1 + breaks.size()) * lineHeight;
     }
 
     int width(Font font, int maxWidth) {
@@ -63,9 +73,15 @@ final class Table {
 
         drawCells(graphics, font, headers, "§7", x, y, widths);
 
+        int rowY = y;
         for (int r = 0; r < rows.size(); r++) {
             Row row = rows.get(r);
-            int rowY = y + (r + 1) * lineHeight;
+            rowY += lineHeight;
+            if (breaks.contains(r)) {
+                int ruleY = rowY + lineHeight / 2 - 1;
+                graphics.fill(x, ruleY, x + total(widths), ruleY + 1, BREAK_COLOR);
+                rowY += lineHeight;
+            }
 
             String name = SkyblockText.fit(row.cells().getFirst(), widths[0]);
             int nameWidth = font.width(name);

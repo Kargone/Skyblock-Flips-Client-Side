@@ -13,9 +13,10 @@ import net.minecraft.client.gui.screens.Screen;
 import java.util.List;
 
 /**
- * The Bazaar's optimizer window: the orders the server's optimizer says to place
- * next, from {@code /api/recommendation}, most expected profit first. Everything in
- * it is worked out by the optimizer; this only lays it out.
+ * The Bazaar's optimizer window: the buy orders the server's optimizer ranks best,
+ * from {@code /api/recommendation}. The orders come grouped by order size bucket;
+ * this shows the top {@value #PER_BUCKET} of each, smallest first, with a line
+ * between buckets. The ranking is the optimizer's; this only lays it out.
  *
  * Sits under the Current Investments panel by default. Clicking an item opens it in
  * the Bazaar, ready to fill in a buy order's amount on the sign, and the window can
@@ -26,8 +27,9 @@ public class OptimizerOverlay {
     private static final int PADDING = 5;
     private static final int MIN_WIDTH = 160;
 
-    /** The title, summary, table header and "more orders" lines, which are always kept on screen. */
-    private static final int FIXED_LINES = 4;
+    /** The buckets in the order they are shown, by the optimizer's {@code display_bucket} names. */
+    private static final List<String> BUCKETS = List.of("1k+500", "2k", "4k", "7k");
+    private static final int PER_BUCKET = 5;
 
     /** The optimizer writes every 30 seconds, so this much older means it has stopped. */
     private static final long STALE_MS = 3 * 60 * 1000L;
@@ -46,16 +48,12 @@ public class OptimizerOverlay {
         int maxContentWidth = guiWidth - 8 - PADDING * 2;
 
         Recommendation recommendation = ServerData.recommendation();
-        List<Recommendation.Order> orders = recommendation.orders();
-        int maxOrders = Math.max(1, (guiHeight - 8 - PADDING * 2) / lineHeight - FIXED_LINES);
-        int shownOrders = Math.min(orders.size(), maxOrders);
-        Table table = orderTable(orders.subList(0, shownOrders));
+        Table table = orderTable(recommendation.orders());
 
         String title = "§6§lBAZAAR OPTIMIZER";
         String age = recommendation.available() ? ageText(recommendation.generatedAt()) : "";
         String summary = recommendation.available() ? summary(recommendation) : null;
-        String status = statusLine(recommendation);
-        String more = shownOrders < orders.size() ? "§8+" + (orders.size() - shownOrders) + " more orders" : null;
+        String status = statusLine(recommendation, table);
 
         int contentWidth = Math.max(MIN_WIDTH, font.width(title) + 8 + font.width(age));
         if (summary != null) contentWidth = Math.max(contentWidth, font.width(summary));
@@ -63,7 +61,7 @@ public class OptimizerOverlay {
         contentWidth = Math.min(contentWidth, maxContentWidth);
         int width = contentWidth + PADDING * 2;
 
-        int lines = 1 + (summary == null ? 0 : 1) + (more == null ? 0 : 1);
+        int lines = 1 + (summary == null ? 0 : 1);
         int height = PADDING * 2 + lines * lineHeight + (status == null ? table.height(lineHeight) : lineHeight);
 
         int panelX;
@@ -97,10 +95,6 @@ public class OptimizerOverlay {
             graphics.text(font, SkyblockText.fit(status, contentWidth), textX, rowY, 0xFFFFFFFF, true);
         } else {
             table.draw(graphics, font, textX, rowY, contentWidth, lineHeight, mouseX, mouseY, targets);
-            rowY += table.height(lineHeight);
-        }
-        if (more != null) {
-            graphics.text(font, more, textX, rowY, 0xFFFFFFFF, true);
         }
 
         panels.add(new AuctionPanelInput.PanelBounds(PanelPosition.Panel.OPTIMIZER, panelX, panelY, width, height));
@@ -115,20 +109,20 @@ public class OptimizerOverlay {
     }
 
     /** The line shown in place of the table, or null when there is a table to show. */
-    private static String statusLine(Recommendation recommendation) {
+    private static String statusLine(Recommendation recommendation, Table table) {
         if (!recommendation.loaded()) {
             return ServerData.lastError().isEmpty() ? "§8waiting for the optimizer..." : "§cserver offline";
         }
         if (!recommendation.available()) return "§8The optimizer hasn't run yet";
-        return recommendation.orders().isEmpty() ? "§8No orders to place" : null;
+        return table.isEmpty() ? "§8No orders to place" : null;
     }
 
-    /** What the optimizer had to work with, and what it expects from the whole list. */
+    /** What the optimizer had to work with, and how many orders pass its checks. */
     private static String summary(Recommendation recommendation) {
         return "§7Purse §f" + SkyblockText.coins(recommendation.purse())
                 + " §8| §7Slots §f" + recommendation.availableSlots()
                 + " §8| §7Cap left §f" + SkyblockText.coins(recommendation.dailyCapRemaining())
-                + " §8| §7Profit " + signed(recommendation.totalExpectedProfit());
+                + " §8| §7Passing §f" + recommendation.qualified();
     }
 
     /** How old the list is; red once the optimizer looks to have stopped, since its orders are out of date. */
@@ -138,35 +132,52 @@ public class OptimizerOverlay {
         return (age > STALE_MS ? "§c" : "§8") + text;
     }
 
+    /**
+     * The top orders of each bucket, in the optimizer's order: the ones that pass
+     * its checks first, best margin first. When a bucket has fewer than
+     * {@value #PER_BUCKET} that pass, the failing ones fill in, greyed out.
+     */
     private static Table orderTable(List<Recommendation.Order> orders) {
-        Table table = new Table("Item", "Order", "Amount", "Price", "Exp. fill", "Exp. profit", "Vol 7d buy / sell");
-        for (Recommendation.Order order : orders) {
-            boolean sell = "sell".equals(order.action());
-            table.add(new Table.Row(List.of(
-                    order.productName(),
-                    sell ? "§csell" : "§abuy",
-                    "§f" + SkyblockText.coins(order.quantity()),
-                    "§f" + SkyblockText.coins(order.orderPrice()),
-                    "§7" + SkyblockText.coins(order.expectedFill()),
-                    signed(order.expectedProfit()),
-                    volume(order.productName())),
-                    // A sell offer lists the whole holding and its only sign is the
-                    // price, so only a buy order has an amount to fill in.
-                    AuctionPanelInput.Action.BAZAAR, order.productName(), sell ? 0 : (int) order.quantity()));
+        Table table = new Table("Item", "Order", "Amount", "Price", "Exp. profit", "Vol 7d buy / sell");
+        for (String bucket : BUCKETS) {
+            List<Recommendation.Order> top = orders.stream()
+                    .filter(order -> bucket.equals(order.bucket()))
+                    .limit(PER_BUCKET)
+                    .toList();
+            if (top.isEmpty()) continue;
+
+            table.addBreak();
+            for (Recommendation.Order order : top) table.add(row(order));
         }
         return table;
+    }
+
+    private static Table.Row row(Recommendation.Order order) {
+        boolean sell = "sell".equals(order.action());
+        boolean passed = order.qualified();
+        return new Table.Row(List.of(
+                order.productName(),
+                passed ? (sell ? "§csell" : "§abuy") : "§8" + order.action(),
+                (passed ? "§f" : "§8") + SkyblockText.coins(order.quantity()),
+                (passed ? "§f" : "§8") + SkyblockText.coins(order.orderPrice()),
+                passed ? signed(order.expectedProfit()) : "§8" + SkyblockText.signedCoins(order.expectedProfit()),
+                volume(order.productName(), passed)),
+                // A sell offer lists the whole holding and its only sign is the
+                // price, so only a buy order has an amount to fill in.
+                AuctionPanelInput.Action.BAZAAR, order.productName(), sell ? 0 : (int) order.quantity());
     }
 
     /**
      * The dashboard's Volume column: units bought / sold on the Bazaar over the last
      * 7 days, from Hypixel's quick status. A dash until the market data arrives.
      */
-    private static String volume(String productName) {
+    private static String volume(String productName, boolean passed) {
         ProductEntry entry = ServerData.products().get(productName);
         MarketData.BazaarQuote quote = entry == null || !entry.hasApiName()
                 ? null : ServerData.market().bazaarQuote(entry.apiName());
         if (quote == null) return "§8-";
-        return "§7" + SkyblockText.coins(quote.buyMovingWeek()) + " §8/ §7" + SkyblockText.coins(quote.sellMovingWeek());
+        String color = passed ? "§7" : "§8";
+        return color + SkyblockText.coins(quote.buyMovingWeek()) + " §8/ " + color + SkyblockText.coins(quote.sellMovingWeek());
     }
 
     private static String signed(double amount) {
