@@ -190,16 +190,18 @@ and 2k, and the top 7 of 4k and 7k.
 
 ```
 BAZAAR OPTIMIZER                                                    12s ago
-Purse 4.79B | Slots 24 | Cap left 15.00B | Passing 62
-Item              Order  Amount    Price  Exp. profit  Vol 7d buy / sell
-Enchanted Melon     buy   1.00K   1.92K       +1.31M      1.20M / 980.50K
-------------------------------------------------------------------------
-Hyper Catalyst      buy   2.00K 211.30K      +11.68M       12.40K / 9.80K
+Cap left 15.00B | Passing 62
+Item              Order  Amount     Buy    Sell  Profit/unit  Vol 7d buy / sell
+Enchanted Melon     buy   1.00K   1.92K   3.40K       +1.31K      1.20M / 980.50K
+--------------------------------------------------------------------------------
+Hyper Catalyst      buy   2.00K 211.30K 220.10K       +5.84K       12.40K / 9.80K
 ```
 
 Within a bucket the optimizer's order is kept: orders that pass its margin and order book checks
 first, best margin first. When a bucket has fewer passing orders than it shows, failing ones fill it in, greyed
-out. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age
+out. Buy is the buy order's price and Sell the price the optimizer expects to sell at (the current
+ask), both per unit. Profit/unit is the optimizer's margin: what each unit should make after tax and
+the expected price drift. The volumes are the dashboard's: units bought / sold on the Bazaar over the last 7 days. The age
 in the title turns red once the list is over 3 minutes old, which means the optimizer has stopped.
 Clicking an item opens it in the Bazaar, and the amount sign's green button then offers its Amount.
 

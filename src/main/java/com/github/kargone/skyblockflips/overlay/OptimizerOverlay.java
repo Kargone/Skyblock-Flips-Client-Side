@@ -124,11 +124,9 @@ public class OptimizerOverlay {
         return table.isEmpty() ? "§8No orders to place" : null;
     }
 
-    /** What the optimizer had to work with, and how many orders pass its checks. */
+    /** How much of the daily cap is left, and how many orders pass the optimizer's checks. */
     private static String summary(Recommendation recommendation) {
-        return "§7Purse §f" + SkyblockText.coins(recommendation.purse())
-                + " §8| §7Slots §f" + recommendation.availableSlots()
-                + " §8| §7Cap left §f" + SkyblockText.coins(recommendation.dailyCapRemaining())
+        return "§7Cap left §f" + SkyblockText.coins(recommendation.dailyCapRemaining())
                 + " §8| §7Passing §f" + recommendation.qualified();
     }
 
@@ -145,7 +143,7 @@ public class OptimizerOverlay {
      * its share that pass, the failing ones fill in, greyed out.
      */
     private static Table orderTable(List<Recommendation.Order> orders) {
-        Table table = new Table("Item", "Order", "Amount", "Price", "Exp. profit", "Vol 7d buy / sell");
+        Table table = new Table("Item", "Order", "Amount", "Buy", "Sell", "Profit/unit", "Vol 7d buy / sell");
         for (Bucket bucket : BUCKETS) {
             List<Recommendation.Order> top = orders.stream()
                     .filter(order -> bucket.name().equals(order.bucket()))
@@ -167,7 +165,8 @@ public class OptimizerOverlay {
                 passed ? (sell ? "§csell" : "§abuy") : "§8" + order.action(),
                 (passed ? "§f" : "§8") + SkyblockText.coins(order.quantity()),
                 (passed ? "§f" : "§8") + SkyblockText.coins(order.orderPrice()),
-                passed ? signed(order.expectedProfit()) : "§8" + SkyblockText.signedCoins(order.expectedProfit()),
+                order.sellPrice() > 0 ? (passed ? "§f" : "§8") + SkyblockText.coins(order.sellPrice()) : "§8-",
+                passed ? signed(order.unitProfit()) : "§8" + SkyblockText.signedCoins(order.unitProfit()),
                 volume(order.productName(), passed)),
                 // A sell offer lists the whole holding and its only sign is the
                 // price, so only a buy order has an amount to fill in.

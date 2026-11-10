@@ -38,13 +38,14 @@ public record Recommendation(
      * @param action         buy or sell
      * @param productName    product list name
      * @param quantity       units to list
-     * @param orderPrice     coins per unit
-     * @param expectedProfit coins, after tax
+     * @param orderPrice     coins per unit, the buy order's price
+     * @param sellPrice      coins per unit it should sell for later (the current ask), 0 from an older server
+     * @param unitProfit     coins per unit, after tax and expected price drift (the optimizer's margin)
      * @param bucket         the display bucket it is ranked in: 7k, 4k, 2k or 1k+500
      * @param qualified      false when it failed a check and is only ranked behind the ones that passed
      */
     public record Order(String action, String productName, long quantity, double orderPrice,
-                        double expectedProfit, String bucket, boolean qualified) {
+                        double sellPrice, double unitProfit, String bucket, boolean qualified) {
     }
 
     public static Recommendation parse(JsonObject root) {
@@ -62,7 +63,8 @@ public record Recommendation(
                         product,
                         (long) number(order, "quantity"),
                         number(order, "order_price"),
-                        number(order, "expected_profit"),
+                        number(order, "sell_price"),
+                        number(order, "margin"),
                         string(order, "display_bucket"),
                         bool(order, "qualified")));
             }
