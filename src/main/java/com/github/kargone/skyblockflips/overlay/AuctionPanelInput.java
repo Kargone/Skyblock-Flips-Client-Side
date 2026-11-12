@@ -129,7 +129,8 @@ public final class AuctionPanelInput {
         } else if (draggedPanel != null && leftDown) {
             PanelPosition.set(draggedPanel,
                     Math.clamp(mouseX - dragOffsetX, 0, Math.max(0, guiWidth - dragWidth)),
-                    Math.clamp(mouseY - dragOffsetY, 0, Math.max(0, guiHeight - dragHeight)));
+                    Math.clamp(mouseY - dragOffsetY, 0, Math.max(0, guiHeight - dragHeight)),
+                    dragWidth, dragHeight);
         } else if (draggedPanel != null) {
             boolean moved = Math.abs(mouseX - pressX) > CLICK_SLOP || Math.abs(mouseY - pressY) > CLICK_SLOP;
             finish(!moved);

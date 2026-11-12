@@ -45,8 +45,9 @@ public class SignAmountOverlay {
         int x;
         int y;
         if (PanelPosition.isSet(PanelPosition.Panel.SIGN)) {
-            x = PanelPosition.x(PanelPosition.Panel.SIGN);
-            y = PanelPosition.y(PanelPosition.Panel.SIGN);
+            // Saved by its centre, so a longer item name widens it evenly both ways.
+            x = PanelPosition.x(PanelPosition.Panel.SIGN) - width / 2;
+            y = PanelPosition.y(PanelPosition.Panel.SIGN) - height / 2;
         } else {
             // Beside the sign, level with the Done button vanilla puts at height/4 + 120.
             x = guiWidth / 2 + 105;

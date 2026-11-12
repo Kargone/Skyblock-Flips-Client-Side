@@ -25,7 +25,8 @@ public final class PanelPosition {
         MAIN("auctionPanel"),
         FORGE("forgePanel"),
         BREAKDOWN("breakdownPanel"),
-        SIGN("signAmountButton"),
+        /** Its width follows the item name, so it is kept by its centre to stay put as that changes. */
+        SIGN("signAmountButton", true),
         REMINDERS("remindersPanel"),
         ACTIVE_AUCTIONS("activeAuctionsPanel"),
         INVESTMENTS("investmentsPanel"),
@@ -33,9 +34,20 @@ public final class PanelPosition {
         OPTIMIZER("optimizerPanel");
 
         private final String configKey;
+        /** True when x and y are the panel's centre rather than its top left corner. */
+        private final boolean centered;
 
         Panel(String configKey) {
+            this(configKey, false);
+        }
+
+        Panel(String configKey, boolean centered) {
             this.configKey = configKey;
+            this.centered = centered;
+        }
+
+        public boolean centered() {
+            return centered;
         }
     }
 
@@ -69,10 +81,16 @@ public final class PanelPosition {
         return spot == null ? 0 : spot.y();
     }
 
-    /** Moves a panel without touching disk - dragging calls this every frame. */
-    public static void set(Panel panel, int newX, int newY) {
+    /**
+     * Moves a panel, given its top left corner and size, without touching disk -
+     * dragging calls this every frame. A {@link Panel#centered() centered} panel
+     * stores its centre instead.
+     */
+    public static void set(Panel panel, int newX, int newY, int width, int height) {
         ensureLoaded();
-        SPOTS.put(panel, new Spot(newX, newY));
+        SPOTS.put(panel, panel.centered()
+                ? new Spot(newX + width / 2, newY + height / 2)
+                : new Spot(newX, newY));
     }
 
     /** Writes the positions out. Called when a drag finishes, not while it runs. */

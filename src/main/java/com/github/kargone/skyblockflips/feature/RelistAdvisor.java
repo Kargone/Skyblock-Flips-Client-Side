@@ -301,8 +301,10 @@ public final class RelistAdvisor {
         return SkyblockText.strip(name).replaceAll("[^\\p{L}\\p{N} '-]", "").trim().toLowerCase(Locale.ROOT);
     }
 
+    /** Green when it reaches the relist threshold (2M by default), yellow for a smaller profit, red for a loss. */
     static String signed(double coins) {
-        return (coins >= 0 ? "§a" : "§c") + SkyblockText.signedCoins(coins);
+        String color = coins < 0 ? "§c" : coins < ModConfig.minRelistProfit() ? "§e" : "§a";
+        return color + SkyblockText.signedCoins(coins);
     }
 
     static String amount(long amount) {

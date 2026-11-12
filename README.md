@@ -216,7 +216,7 @@ placement for that panel. Clicks on a panel never reach the menu underneath.
 | `auctionPanel` | Auction Products |
 | `forgePanel` | Forge Products |
 | `breakdownPanel` | breakdown window |
-| `signAmountButton` | amount sign button |
+| `signAmountButton` | amount sign button (saved by its centre, since its width follows the item name) |
 | `remindersPanel` | Market Reminders |
 | `optimizerPanel` | Bazaar Optimizer |
 
